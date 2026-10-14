@@ -26,6 +26,9 @@
       $('errore').textContent = '';
       $('indirizzo').textContent = r.urlGiocatori;
       $('qr').src = `/qr.svg?${Date.now()}`;
+      $('stato-voce').textContent = r.voce
+        ? `Narratore: voce teatrale ${r.voce}. Se una frase non è pronta in tempo, legge la voce del browser.`
+        : 'Narratore: voce del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env.';
     });
   });
   socket.on('disconnect', () => { $('errore').textContent = 'Connessione al server persa, riprovo…'; });
@@ -35,10 +38,10 @@
     render();
   });
 
-  // ---------------------------------------------------------------- voce
+  // ---------------------------------------------------------- voce e suoni
 
-  // Il browser permette di parlare solo dopo un clic: per questo c'è il pulsante.
-  let voceAttiva = false;
+  // Il browser permette di suonare solo dopo un clic: per questo c'è il pulsante.
+  let audioAttivo = false;
   let voci = [];
   const sintesi = window.speechSynthesis;
 
@@ -53,18 +56,30 @@
   if (sintesi) {
     caricaVoci();
     sintesi.onvoiceschanged = caricaVoci;
-  } else {
-    $('attiva-voce').disabled = true;
-    $('attiva-voce').textContent = 'Voce non supportata';
   }
   $('voce').addEventListener('change', (e) => memoria.scrivi('lupi-voce', e.target.value));
 
-  $('attiva-voce').addEventListener('click', () => {
-    voceAttiva = !voceAttiva;
-    $('attiva-voce').classList.toggle('attiva', voceAttiva);
-    $('attiva-voce').textContent = voceAttiva ? '🔊 Voce attiva' : '🔈 Attiva la voce';
-    if (voceAttiva) parla('Il narratore è pronto.');
-    else sintesi.cancel();
+  for (const tipo of ['musica', 'effetti', 'voce']) {
+    const cursore = $(`vol-${tipo}`);
+    cursore.value = String(Suoni.volumi[tipo]);
+    cursore.addEventListener('input', () => Suoni.volume(tipo, Number(cursore.value)));
+  }
+
+  $('attiva-voce').addEventListener('click', async () => {
+    audioAttivo = !audioAttivo;
+    $('attiva-voce').classList.toggle('attiva', audioAttivo);
+    $('attiva-voce').textContent = audioAttivo ? '🔊 Audio attivo' : '🔈 Attiva l’audio';
+    if (audioAttivo) {
+      try {
+        await Suoni.attiva();
+        Suoni.riprendi();
+      } catch {
+        $('errore').textContent = 'Il browser non ha permesso di attivare l’audio.';
+      }
+    } else {
+      if (sintesi) sintesi.cancel();
+      await Suoni.sospendi();
+    }
   });
 
   function diUnaFrase(frase) {
@@ -75,6 +90,7 @@
       if (v) u.voice = v;
       u.rate = 0.95;
       u.pitch = 0.9;
+      u.volume = Suoni.volumi.voce;
       // Rete di sicurezza: alcuni browser a volte non segnalano la fine.
       const timer = setTimeout(fine, 3000 + frase.length * 120);
       u.onend = u.onerror = () => { clearTimeout(timer); fine(); };
@@ -82,23 +98,35 @@
     });
   }
 
-  // Frase per frase: Chrome tronca le letture troppo lunghe.
-  async function parla(testo) {
-    const frasi = testo.match(/[^.!?]+[.!?]*/g) || [testo];
-    for (const f of frasi) {
-      if (f.trim()) await diUnaFrase(f.trim());
-      await dormi(150);
+  // Voce del browser, frase per frase: Chrome tronca le letture troppo lunghe.
+  async function parlaBrowser(testo) {
+    if (!sintesi) return dormi(1200 + testo.length * 45);
+    Suoni.abbassa(true);
+    try {
+      const frasi = testo.match(/[^.!?]+[.!?]*/g) || [testo];
+      for (const f of frasi) {
+        if (f.trim()) await diUnaFrase(f.trim());
+        await dormi(150);
+      }
+    } finally {
+      Suoni.abbassa(false);
     }
   }
 
   // Le narrazioni arrivano in coda; al server si risponde quando la lettura è finita.
+  // Ordine: effetto sonoro, poi la voce teatrale (se il server ha il file) o quella del browser.
   let coda = Promise.resolve();
-  socket.on('narra', ({ id, testo }) => {
-    coda = coda.then(async () => {
-      if (voceAttiva && sintesi) await parla(testo);
-      else await dormi(1200 + testo.length * 45);
-      socket.emit('tavolo:narrazioneFinita', id);
-    });
+  socket.on('narra', ({ id, testo, audio, suono }) => {
+    coda = coda
+      .then(async () => {
+        if (!audioAttivo) return dormi(1200 + testo.length * 45);
+        const durata = await Suoni.effetto(suono);
+        if (durata) await dormi(Math.min(durata, 2.5) * 1000);
+        const letta = audio ? await Suoni.parlaFile(audio) : false;
+        if (!letta) await parlaBrowser(testo);
+      })
+      .catch((e) => console.error('Narrazione:', e))
+      .then(() => socket.emit('tavolo:narrazioneFinita', id));
   });
 
   // ------------------------------------------------------------- comandi
@@ -153,10 +181,21 @@
       .join(' · ');
   }
 
+  // Quale sottofondo suona in ogni fase (i nomi sono quelli di public/audio/suoni.json).
+  function sottofondo(s) {
+    if (s.fase === 'fine') return `fine-${s.vincitore}`;
+    return (
+      { lobby: 'lobby', ruoli: 'lobby', notte: 'notte', alba: 'alba', giorno: 'giorno', voto: 'voto', verdetto: 'voto' }[s.fase] ??
+      undefined // "sparo": resta il sottofondo di prima
+    );
+  }
+
   function render() {
     const s = stato;
     if (!s) return;
     document.body.dataset.fase = s.fase;
+    const traccia = sottofondo(s);
+    if (traccia !== undefined) Suoni.ambiente(traccia);
     const inLobby = s.fase === 'lobby';
     $('lobby').hidden = !inLobby;
     $('partita').hidden = inLobby;

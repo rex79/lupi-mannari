@@ -188,6 +188,34 @@ body.tavolo { font-size: 18px; }
 .voce { display: flex; gap: 8px; flex-wrap: wrap; }
 .voce select { max-width: 240px; }
 #attiva-voce.attiva { background: var(--accento); color: #1a1408; border-color: transparent; }
+.mixer { position: relative; }
+.mixer summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.7em 1em;
+  border: 1px solid var(--bordo);
+  border-radius: 10px;
+  background: var(--pannello-2);
+}
+.mixer summary::-webkit-details-marker { display: none; }
+.mixer-pannello {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 5;
+  width: min(340px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--pannello);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+.mixer-pannello p { margin: 0; }
+.mixer-pannello label { display: grid; gap: 4px; font-size: 0.9em; color: var(--tenue); }
+.mixer-pannello select { max-width: 100%; }
+.mixer-pannello input[type='range'] { width: 100%; accent-color: var(--accento); }
 
 .ingresso-tavolo {
   display: flex;

@@ -16,6 +16,15 @@ const TEMPI_BASE = {
 };
 const MAX_GIOCATORI = 18;
 
+// Effetto sonoro suonato sul tavolo quando il narratore sveglia un ruolo.
+const SUONI_SVEGLIA = {
+  cupido: 'arpa',
+  lupo: 'ululato',
+  strega: 'calderone',
+  veggente: 'cristallo',
+  guardia: null,
+};
+
 // Scelte "finte" per chi non agisce: tutti toccano lo schermo, nessuno si tradisce.
 const TITOLI_FINTI = [
   'Chi ti sembra sospetto?',
@@ -59,6 +68,7 @@ function piuVotati(valori) {
 class Partita {
   constructor(io, opzioni = {}) {
     this.io = io;
+    this.voce = opzioni.voce ?? null; // voce teatrale (src/voce.js), facoltativa
     this.scala = opzioni.scalaTempi ?? 1;
     this.minGiocatori = opzioni.minGiocatori ?? 4;
     this.t = {};
@@ -106,7 +116,7 @@ class Partita {
       }
       socket.data.tavolo = true;
       socket.join('tavolo');
-      rispondi(cb, { ok: true, urlGiocatori: urlGiocatori() });
+      rispondi(cb, { ok: true, urlGiocatori: urlGiocatori(), voce: this.voce?.descrizione() ?? null });
       socket.emit('stato', this.statoPubblico());
     });
 
@@ -443,15 +453,20 @@ class Partita {
   }
 
   // Il narratore parla sul tavolo; si prosegue quando il tavolo ha finito di leggere.
-  async narra(run, testo) {
+  // "suono" è il nome di un effetto da suonare prima della frase (vedi public/audio/suoni.json).
+  async narra(run, testo, suono = null) {
     this.controlla(run);
     const id = ++this.narrId;
+    const tavoli = this.io.sockets.adapter.rooms.get('tavolo')?.size ?? 0;
+    // Con la voce teatrale si aspetta il file audio, ma mai più di qualche secondo:
+    // se tarda, il tavolo legge con la voce del browser e il file servirà la prossima volta.
+    const audio = this.voce && tavoli ? await this.voce.preparaEntro(testo, 8000) : null;
+    this.controlla(run);
     this.narrazione = testo;
     this.trasmetti();
     const stima = 1500 + testo.length * 65;
-    const tavoli = this.io.sockets.adapter.rooms.get('tavolo')?.size ?? 0;
-    const limite = tavoli ? stima * 2 + 5000 : stima * this.scala;
-    this.io.to('tavolo').emit('narra', { id, testo });
+    const limite = tavoli ? stima * 2 + 8000 : stima * this.scala;
+    this.io.to('tavolo').emit('narra', { id, testo, audio, suono });
     await new Promise((risolvi) => {
       const timer = setTimeout(fatto, limite);
       const self = this;
@@ -516,7 +531,7 @@ class Partita {
         if (!morti.includes(avvelenato)) morti.push(avvelenato);
       }
       this.fase = 'alba';
-      await this.narra(run, N.alba());
+      await this.narra(run, N.alba(), 'gallo');
       if (morti.length) {
         await this.risolviMorti(run, mescola(morti).map((id) => ({ id, causa: 'notte' })));
       } else {
@@ -537,7 +552,7 @@ class Partita {
       // ---- voto
       this.fase = 'voto';
       this.azioni = new Map();
-      await this.narra(run, N.voto());
+      await this.narra(run, N.voto(), 'rintocco');
       await this.attendi(run, {
         max: this.t.votoMax,
         fatto: () => this.vivi().every((p) => this.azioni.has(p.id)),
@@ -564,7 +579,7 @@ class Partita {
   // così il villaggio non capisce chi è ancora in gioco.
   async turnoNotturno(run, ruolo) {
     this.azioni = new Map();
-    await this.narra(run, N.sveglia(ruolo));
+    await this.narra(run, N.sveglia(ruolo), SUONI_SVEGLIA[ruolo]);
     const attori = this.vivi().filter((p) => p.ruolo === ruolo);
     const presente = attori.length > 0;
     const min = casuale(this.t.azioneMin, this.t.azioneMin + this.t.azioneVariabile);
@@ -608,16 +623,16 @@ class Partita {
       const r = RUOLI[p.ruolo];
       if (m.causa === 'notte') {
         this.annota(`Notte ${this.notte}: è morto ${p.nome} (${r.nome}).`);
-        await this.narra(run, N.mortoNotte(p.nome, r.conArticolo));
+        await this.narra(run, N.mortoNotte(p.nome, r.conArticolo), 'campana');
       } else if (m.causa === 'voto') {
         this.annota(`Giorno ${this.notte}: il villaggio ha eliminato ${p.nome} (${r.nome}) con ${m.voti} vot${m.voti === 1 ? 'o' : 'i'}.`);
-        await this.narra(run, N.eliminato(p.nome, r.conArticolo, m.voti));
+        await this.narra(run, N.eliminato(p.nome, r.conArticolo, m.voti), 'campana');
       } else if (m.causa === 'amore') {
         this.annota(`${p.nome} (${r.nome}) muore di dolore per ${m.amato}.`);
-        await this.narra(run, N.amore(p.nome, m.amato, r.conArticolo));
+        await this.narra(run, N.amore(p.nome, m.amato, r.conArticolo), 'campana');
       } else if (m.causa === 'sparo') {
         this.annota(`Il cacciatore colpisce ${p.nome} (${r.nome}).`);
-        await this.narra(run, N.sparo(p.nome, r.conArticolo));
+        await this.narra(run, N.sparo(p.nome, r.conArticolo), 'sparo');
       }
 
       // Le reazioni a catena passano davanti alle altre morti: lo sparo del cacciatore
@@ -667,7 +682,7 @@ class Partita {
     this.annota(
       { lupi: 'Vincono i lupi mannari.', villaggio: 'Vince il villaggio.', innamorati: 'Vincono gli innamorati.' }[vincitore],
     );
-    await this.narra(run, N.vittoria(vincitore));
+    await this.narra(run, N.vittoria(vincitore), `fine-${vincitore}`);
     return true;
   }
 }

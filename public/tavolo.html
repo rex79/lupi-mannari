@@ -11,8 +11,17 @@
     <header class="barra-tavolo">
       <h1>🐺 Lupi mannari</h1>
       <div class="voce">
-        <select id="voce" aria-label="Voce del narratore"></select>
-        <button id="attiva-voce">🔈 Attiva la voce</button>
+        <details class="mixer">
+          <summary>🎚️ Audio</summary>
+          <div class="mixer-pannello">
+            <p id="stato-voce" class="nota"></p>
+            <label>Voce del browser (riserva) <select id="voce" aria-label="Voce del browser"></select></label>
+            <label>Musica <input type="range" id="vol-musica" min="0" max="1" step="0.05"></label>
+            <label>Effetti <input type="range" id="vol-effetti" min="0" max="1" step="0.05"></label>
+            <label>Voce <input type="range" id="vol-voce" min="0" max="1" step="0.05"></label>
+          </div>
+        </details>
+        <button id="attiva-voce">🔈 Attiva l’audio</button>
       </div>
     </header>
     <p id="errore" class="errore"></p>
@@ -63,6 +72,7 @@
     </section>
   </div>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/audio.js"></script>
   <script src="/tavolo.js"></script>
 </body>
 </html>
