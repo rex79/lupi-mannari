@@ -19,6 +19,41 @@
   let token = memoria.leggi(CHIAVE);
   let dentro = false;
   let stato = null;
+  // "collegato" diventa vero solo quando il server ha riconosciuto questo telefono
+  // sulla connessione attuale: prima di allora le scelte restano in attesa.
+  let collegato = false;
+  let inSospeso = null; // { valore } da inviare appena possibile
+
+  function avviso(testo) {
+    $('avviso').textContent = testo || '';
+  }
+
+  // Invia una scelta e aspetta la conferma del server. Se la connessione è caduta
+  // (tipico quando lo schermo del telefono si spegne) la scelta parte dopo il rientro.
+  function invia(valore) {
+    if (!collegato) {
+      inSospeso = { valore };
+      avviso('Mi sto ricollegando: la tua scelta partirà tra un attimo…');
+      return;
+    }
+    socket.timeout(4000).emit('giocatore:azione', valore, (err, r) => {
+      if (err) {
+        // Nessuna risposta: connessione "zombie". Si forza un nuovo collegamento.
+        inSospeso = { valore };
+        collegato = false;
+        avviso('Connessione lenta, riprovo…');
+        socket.disconnect().connect();
+        return;
+      }
+      if (r?.errore === 'sconosciuto') {
+        inSospeso = { valore };
+        collegato = false;
+        entra();
+        return;
+      }
+      avviso(r?.errore ? 'Questa scelta non è più disponibile.' : '');
+    });
+  }
 
   function mostra(quale) {
     $('ingresso').hidden = quale !== 'ingresso';
@@ -27,6 +62,8 @@
 
   function esci(messaggio) {
     dentro = false;
+    collegato = false;
+    inSospeso = null;
     mostra('ingresso');
     $('errore').textContent = messaggio || '';
   }
@@ -38,9 +75,15 @@
         token = r.token;
         memoria.scrivi(CHIAVE, token);
         dentro = true;
+        collegato = true;
         $('errore').textContent = '';
         mostra('gioco');
         render();
+        if (inSospeso) {
+          const { valore } = inSospeso;
+          inSospeso = null;
+          invia(valore);
+        }
         return;
       }
       if (r.serveNome) {
@@ -56,8 +99,15 @@
     if (token) entra();
     else mostra('ingresso');
   });
-  socket.on('disconnect', () => { $('connessione').hidden = false; });
-  socket.on('stato', (s) => { stato = s; render(); });
+  socket.on('disconnect', () => {
+    collegato = false;
+    $('connessione').hidden = false;
+  });
+  socket.on('stato', (s) => {
+    if (stato && (s.fase !== stato.fase || s.sottofase !== stato.sottofase)) avviso('');
+    stato = s;
+    render();
+  });
   socket.on('espulso', () => {
     token = null;
     memoria.scrivi(CHIAVE, null);
@@ -81,7 +131,7 @@
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
     if ('pronto' in b.dataset) {
-      socket.emit('giocatore:azione', null);
+      invia(null);
       b.disabled = true;
     } else if ('esci' in b.dataset) {
       socket.emit('giocatore:esci');
@@ -95,11 +145,11 @@
       let scelti = a.scelta.includes(id) ? a.scelta.filter((x) => x !== id) : [...a.scelta, id];
       if (scelti.length > a.multipla) scelti = scelti.slice(-a.multipla);
       a.scelta = scelti;
-      socket.emit('giocatore:azione', scelti);
+      invia(scelti);
       b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('scelto', scelti.includes(x.dataset.bersaglio)));
       if (navigator.vibrate) navigator.vibrate(25);
     } else if (b.dataset.bersaglio) {
-      socket.emit('giocatore:azione', b.dataset.bersaglio);
+      invia(b.dataset.bersaglio);
       b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('scelto', x === b));
       if (navigator.vibrate) navigator.vibrate(25);
     }

@@ -129,6 +129,7 @@ body.giocatore main {
 
 #azione h2 { font-size: 1.3rem; }
 .sottotitolo { color: var(--tenue); margin: -0.2em 0 14px; }
+.avviso { color: var(--accento); min-height: 1.2em; margin: 10px 0 0; }
 .attesa .dettaglio { color: var(--amore); margin-top: 12px; }
 .opzioni { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .opzioni button { padding: 1em 0.6em; overflow-wrap: anywhere; }

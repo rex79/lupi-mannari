@@ -147,7 +147,8 @@ class Partita {
       rispondi(cb, esito);
       if (esito.ok) setImmediate(() => this.trasmetti());
     });
-    socket.on('giocatore:azione', (valore) => this.azione(socket.data.giocatoreId, valore));
+    // La risposta dice al telefono se la scelta è arrivata davvero.
+    socket.on('giocatore:azione', (valore, cb) => rispondi(cb, this.azione(socket.data.giocatoreId, valore)));
     socket.on('giocatore:esci', () => this.rimuovi(socket.data.giocatoreId, null));
     socket.on('disconnect', () => {
       const p = this.giocatori.get(socket.data.giocatoreId);
@@ -199,30 +200,35 @@ class Partita {
     this.trasmetti();
   }
 
+  // Registra una scelta. Restituisce { ok } oppure { errore } per la risposta al telefono:
+  // "sconosciuto" significa che questa connessione non si è ancora identificata.
   azione(id, valore) {
     const p = this.giocatori.get(id);
-    if (!p) return;
+    if (!p) return { errore: 'sconosciuto' };
     const a = this.azionePer(p);
-    if (!a) return;
+    if (!a) return { errore: 'non valida' };
     if (a.tipo === 'pronto') {
       p.pronto = true;
-      return this.trasmetti();
+      this.trasmetti();
+      return { ok: true };
     }
     const valida = (v) => a.opzioni.some((o) => o.id === v);
     // Scelta multipla (Cupido): si invia l'elenco completo dei selezionati.
     if (a.multipla) {
-      if (!Array.isArray(valore)) return;
+      if (!Array.isArray(valore)) return { errore: 'non valida' };
       this.azioni.set(p.id, [...new Set(valore)].filter(valida).slice(0, a.multipla));
-      return this.trasmetti();
+      this.trasmetti();
+      return { ok: true };
     }
-    if (typeof valore !== 'string' || !valida(valore)) return;
-    if (a.bloccata && a.scelta) return;
+    if (typeof valore !== 'string' || !valida(valore)) return { errore: 'non valida' };
+    if (a.bloccata && a.scelta) return { errore: 'non valida' };
     this.azioni.set(p.id, valore);
     if (a.tipo === 'veggente') {
       const t = this.giocatori.get(valore);
       p.indagini.push({ nome: t.nome, lupo: t.ruolo === 'lupo', notte: this.notte });
     }
     this.trasmetti();
+    return { ok: true };
   }
 
   // ------------------------------------------------------------------- stato
@@ -614,12 +620,16 @@ class Partita {
         await this.narra(run, N.sparo(p.nome, r.conArticolo));
       }
 
-      const amato = this.amatoDi(p);
-      if (amato?.vivo) coda.push({ id: amato.id, causa: 'amore', amato: p.nome });
+      // Le reazioni a catena passano davanti alle altre morti: lo sparo del cacciatore
+      // viene annunciato subito, non dopo le altre vittime della notte.
+      const reazioni = [];
       if (p.ruolo === 'cacciatore') {
         const bersaglio = await this.sparo(run, p);
-        if (bersaglio) coda.push({ id: bersaglio, causa: 'sparo' });
+        if (bersaglio) reazioni.push({ id: bersaglio, causa: 'sparo' });
       }
+      const amato = this.amatoDi(p);
+      if (amato?.vivo) reazioni.push({ id: amato.id, causa: 'amore', amato: p.nome });
+      coda.unshift(...reazioni);
     }
   }
 
