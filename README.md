@@ -5,7 +5,7 @@ mentre il computer fa da **narratore** e parla a tutti.
 
 ## Avvio
 
-Serve Node.js 18 o più recente (`node --version`).
+Serve Node.js 20.12 o più recente (`node --version`).
 
 ```bash
 npm install
@@ -21,8 +21,32 @@ Il terminale stampa due indirizzi:
 I telefoni devono essere sulla stessa Wi-Fi del Mac. La prima volta macOS può chiedere se consentire
 le connessioni in entrata a `node`: rispondi **Consenti**.
 
-Sul tavolo premi **Attiva la voce** e scegli una voce italiana: i browser fanno parlare la pagina solo dopo un clic.
-Su Mac le voci migliori si scaricano da *Impostazioni di Sistema → Accessibilità → Contenuti letti ad alta voce → Voce di sistema → Gestisci voci* (cerca le voci italiane "Migliorata" o "Premium").
+Sul tavolo premi **Attiva l’audio**: i browser fanno suonare la pagina solo dopo un clic.
+Dal pannello **🎚️ Audio** regoli musica, effetti e voce.
+
+## Voce del narratore e suoni
+
+**Voce teatrale (consigliata).** Il narratore può recitare con una voce generata da OpenAI
+(`gpt-4o-mini-tts`), a cui si danno istruzioni di regia: voce profonda, ritmo lento, pause prima delle rivelazioni.
+
+1. Crea una chiave su https://platform.openai.com/api-keys
+2. Copia `.env.esempio` in `.env` e incolla la chiave in `OPENAI_API_KEY`.
+3. Riavvia con `npm start`.
+
+All'avvio il server genera in sottofondo le frasi fisse del copione; durante la partita genera solo
+quelle con i nomi dei giocatori. Ogni frase resta salvata in `cache-voce/`, quindi si paga una volta sola.
+In `.env` puoi cambiare voce (`VOCE_NOME`) e regia (`VOCE_ISTRUZIONI`): con una regia nuova le frasi vengono rigenerate.
+Se il servizio non risponde in tempo, quella frase la legge la voce del browser e il gioco va avanti.
+
+**Voce del browser (senza chiave).** Su Mac le voci migliori si scaricano da *Impostazioni di Sistema →
+Accessibilità → Contenuti letti ad alta voce → Voce di sistema → Gestisci voci* (cerca le voci italiane
+"Migliorata" o "Premium"), poi si sceglie dal pannello Audio.
+
+**Suoni.** Sottofondi in loop per ogni fase (notte, alba, giorno, votazione, fine) ed effetti sugli eventi
+(ululato dei lupi, campana a morto, sparo del cacciatore…). La musica si abbassa da sola quando il narratore parla.
+I file vanno in `public/audio/`: l'elenco di cosa serve e dove trovarlo è in
+[public/audio/LEGGIMI.md](public/audio/LEGGIMI.md). Un file mancante viene saltato, quindi si possono aggiungere poco alla volta.
+Suona solo il tavolo: i telefoni restano muti, così nessun suono tradisce chi sta agendo.
 
 ## Come si gioca
 
@@ -67,8 +91,10 @@ server.js            server web + Socket.IO, indirizzi e QR
 src/partita.js       logica di gioco: fasi, turni, voti, vittoria (il server decide tutto)
 src/ruoli.js         ruoli e composizione per numero di giocatori
 src/narratore.js     il copione del narratore (aggiungi qui nuove frasi)
+src/voce.js          voce teatrale: sintesi vocale OpenAI con cache su disco
 public/index.html    pagina telefono  (giocatore.js)
-public/tavolo.html   pagina tavolo con voce  (tavolo.js)
+public/tavolo.html   pagina tavolo  (tavolo.js, audio.js per voce, sottofondi ed effetti)
+public/audio/        suoni (elenco in suoni.json, istruzioni in LEGGIMI.md)
 scripts/             bot e simulazione
 ```
 
@@ -76,6 +102,5 @@ Ogni telefono riceve solo ciò che il suo giocatore può sapere: i ruoli altrui 
 
 ## Idee per i prossimi passi
 
-- Voce migliore: frasi fisse pre-registrate (es. con Piper o un TTS cloud) e voce live solo per i nomi.
 - Altri ruoli: la bambina che spia i lupi, il ladro che cambia carta.
 - Ballottaggio in caso di parità, sindaco, racconti delle morti generati da un LLM locale.

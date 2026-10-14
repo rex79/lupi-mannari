@@ -10,7 +10,7 @@
     "simula": "node scripts/simula.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.12"
   },
   "dependencies": {
     "express": "^4.21.2",

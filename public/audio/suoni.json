@@ -1,0 +1,26 @@
+{
+  "_nota": "Elenco dei suoni del tavolo. I percorsi sono relativi a public/audio/. Un file mancante viene semplicemente saltato. 'volume' va da 0 a 1. Vedi LEGGIMI.md per dove trovarli.",
+  "ambienti": {
+    "lobby": { "file": "ambienti/lobby.mp3", "volume": 0.5 },
+    "notte": { "file": "ambienti/notte.mp3", "volume": 0.8 },
+    "alba": { "file": "ambienti/alba.mp3", "volume": 0.7 },
+    "giorno": { "file": "ambienti/giorno.mp3", "volume": 0.6 },
+    "voto": { "file": "ambienti/voto.mp3", "volume": 0.7 },
+    "fine-lupi": { "file": "ambienti/fine-lupi.mp3", "volume": 0.7 },
+    "fine-villaggio": { "file": "ambienti/fine-villaggio.mp3", "volume": 0.7 },
+    "fine-innamorati": { "file": "ambienti/fine-villaggio.mp3", "volume": 0.7 }
+  },
+  "effetti": {
+    "ululato": { "file": "effetti/ululato.mp3", "volume": 0.9 },
+    "calderone": { "file": "effetti/calderone.mp3", "volume": 0.8 },
+    "arpa": { "file": "effetti/arpa.mp3", "volume": 0.7 },
+    "cristallo": { "file": "effetti/cristallo.mp3", "volume": 0.7 },
+    "gallo": { "file": "effetti/gallo.mp3", "volume": 0.8 },
+    "campana": { "file": "effetti/campana.mp3", "volume": 0.8 },
+    "sparo": { "file": "effetti/sparo.mp3", "volume": 0.9 },
+    "rintocco": { "file": "effetti/rintocco.mp3", "volume": 0.8 },
+    "fine-lupi": { "file": "effetti/vittoria-lupi.mp3", "volume": 0.9 },
+    "fine-villaggio": { "file": "effetti/vittoria-villaggio.mp3", "volume": 0.9 },
+    "fine-innamorati": { "file": "effetti/vittoria-villaggio.mp3", "volume": 0.9 }
+  }
+}

@@ -20,7 +20,8 @@ const EVENTI = {
 
 async function main() {
   const partite = Number(process.argv[2]) || 5;
-  const srv = await avviaServer({ porta: 0, chiave: 'test', scalaTempi: SCALA });
+  // voce: null → la simulazione non chiama mai il servizio di sintesi vocale.
+  const srv = await avviaServer({ porta: 0, chiave: 'test', scalaTempi: SCALA, voce: null });
   const url = `http://localhost:${srv.porta}`;
   const esiti = {};
   const eventi = Object.fromEntries(Object.keys(EVENTI).map((k) => [k, 0]));
