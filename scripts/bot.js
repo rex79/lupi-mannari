@@ -34,6 +34,10 @@ function avviaBot(nome, { url = 'http://localhost:3000', lentezza = 1, log = () 
       const att = ultimoStato?.io?.azione;
       if (!att || att.tipo !== a.tipo) return;
       if (att.tipo === 'pronto') return socket.emit('giocatore:azione', null);
+      if (att.multipla) {
+        const scelti = [...att.opzioni].sort(() => Math.random() - 0.5).slice(0, att.multipla).map((o) => o.id);
+        return socket.emit('giocatore:azione', scelti);
+      }
       // I lupi seguono la scelta di un compagno, se c'è.
       const compagno = att.compagni?.find((c) => c.scelta);
       const opz = (compagno && att.opzioni.find((o) => o.nome === compagno.scelta)) ||

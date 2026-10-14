@@ -28,13 +28,26 @@ Su Mac le voci migliori si scaricano da *Impostazioni di Sistema → Accessibili
 
 1. Ognuno entra con il proprio nome; dal tavolo si avvia la partita (minimo 4 giocatori).
 2. Ruoli in base al numero di giocatori: 1 lupo fino a 6, 2 fino a 10, poi 3; sempre una veggente; la guardia da 6 in su.
-3. **Notte**: il narratore chiama lupi, veggente e guardia. *Tutti* ricevono qualcosa da toccare a ogni turno
-   (chi non agisce riceve una domanda finta), e ogni turno dura un tempo simile anche se quel ruolo è morto:
-   così nessuno si tradisce.
-4. **Alba**: il narratore annuncia la vittima (salvata se protetta dalla guardia) e ne rivela il ruolo.
+   Poi i ruoli aggiuntivi scelti nella lobby (vedi sotto), e il resto contadini.
+3. **Notte**: il narratore chiama Cupido (solo la prima notte), lupi, strega, veggente e guardia.
+   *Tutti* ricevono qualcosa da toccare a ogni turno (chi non agisce riceve una domanda finta), e ogni turno
+   dura un tempo simile anche se quel ruolo è morto: così nessuno si tradisce.
+4. **Alba**: il narratore annuncia i morti della notte e ne rivela il ruolo, senza dire chi li ha uccisi.
 5. **Giorno**: discussione a tempo (dal tavolo si può passare subito al voto), poi voto sul telefono.
    In caso di parità nessuno viene eliminato.
 6. Vincono i lupi quando sono tanti quanti gli altri; vince il villaggio quando non resta nessun lupo.
+
+### Ruoli aggiuntivi
+
+Si attivano con le caselle nella lobby del tavolo (strega e cacciatore sono attivi di partenza).
+
+- 🧪 **Strega**: dopo i lupi vede la loro vittima. Ha una pozione della vita (salva la vittima) e una della morte
+  (uccide chi vuole), ognuna usabile una volta per partita, al massimo una per notte. La guardia non ferma il veleno.
+- 🏹 **Cacciatore**: quando muore, di notte o al rogo, sceglie sul telefono chi colpire con l'ultimo sparo.
+- 💘 **Cupido**: la prima notte sceglie due innamorati, che lo scoprono sul proprio telefono. Se uno muore,
+  l'altro muore di dolore. Se la coppia è formata da un lupo e un abitante, i due vincono solo restando gli ultimi due in vita.
+
+Le morti a catena (innamorato, colpo del cacciatore) vengono risolte e annunciate una alla volta.
 
 Se un telefono si blocca o si ricarica la pagina, il giocatore rientra al suo posto con lo stesso ruolo.
 
@@ -64,5 +77,5 @@ Ogni telefono riceve solo ciò che il suo giocatore può sapere: i ruoli altrui 
 ## Idee per i prossimi passi
 
 - Voce migliore: frasi fisse pre-registrate (es. con Piper o un TTS cloud) e voce live solo per i nomi.
-- Nuovi ruoli: strega, cacciatore, cupido.
+- Altri ruoli: la bambina che spia i lupi, il ladro che cambia carta.
 - Ballottaggio in caso di parità, sindaco, racconti delle morti generati da un LLM locale.

@@ -11,11 +11,20 @@ const { avviaBot, NOMI } = require('./bot');
 
 const SCALA = 0.01;
 
+// Eventi dei nuovi ruoli da contare nella cronaca.
+const EVENTI = {
+  'morti di dolore (cupido)': 'di dolore',
+  'colpi del cacciatore': 'Il cacciatore colpisce',
+  'vittorie degli innamorati': 'Vincono gli innamorati',
+};
+
 async function main() {
   const partite = Number(process.argv[2]) || 5;
   const srv = await avviaServer({ porta: 0, chiave: 'test', scalaTempi: SCALA });
   const url = `http://localhost:${srv.porta}`;
-  const esiti = { lupi: 0, villaggio: 0 };
+  const esiti = {};
+  const eventi = Object.fromEntries(Object.keys(EVENTI).map((k) => [k, 0]));
+  let mostrataAmore = false;
   let errori = 0;
 
   for (let k = 0; k < partite; k++) {
@@ -32,6 +41,9 @@ async function main() {
     });
     await new Promise((r) => tavolo.emit('tavolo:entra', 'test', r));
     tavolo.emit('tavolo:nuovaPartita');
+    // Alterna le configurazioni: tutti i ruoli extra, solo quelli predefiniti, nessuno.
+    const extra = [['strega', 'cacciatore', 'cupido'], ['strega', 'cacciatore'], []][k % 3];
+    tavolo.emit('tavolo:impostazioni', { extra });
 
     for (let i = 0; i < n; i++) bot.push(avviaBot(`${NOMI[i]}`, { url, lentezza: 0.01 }));
     await attendi(() => stato?.giocatori.length === n, 3000);
@@ -44,15 +56,22 @@ async function main() {
       errori++;
       console.log(`✗ Partita ${k + 1} (${n} giocatori) bloccata in fase "${stato?.fase}"`);
     } else {
-      esiti[stato.vincitore]++;
+      esiti[stato.vincitore] = (esiti[stato.vincitore] || 0) + 1;
       const coerente = controllaFine(stato);
       if (!coerente) errori++;
+      const cronaca = stato.storia.join(' ');
+      for (const [chiave, testo] of Object.entries(EVENTI)) if (cronaca.includes(testo)) eventi[chiave]++;
       console.log(
-        `${coerente ? '✓' : '✗'} Partita ${k + 1}: ${n} giocatori, ${stato.notte} notti, vince ${stato.vincitore}. ` +
-          `Fasi: ${[...fasiViste].join(' → ')}`,
+        `${coerente ? '✓' : '✗'} Partita ${k + 1}: ${n} giocatori, extra [${extra.join(', ')}], ` +
+          `${stato.notte} notti, vince ${stato.vincitore}.`,
       );
-      if (k === 0) console.log('   Cronaca:\n   ' + stato.storia.join('\n   '));
+      if (k < 3 || (cronaca.includes('di dolore') && !mostrataAmore)) {
+        if (cronaca.includes('di dolore')) mostrataAmore = true;
+        console.log('   ' + stato.storia.join('\n   '));
+      }
     }
+    if (!srv.partita.pozioni.vita) eventi['pozioni della vita usate'] = (eventi['pozioni della vita usate'] || 0) + 1;
+    if (!srv.partita.pozioni.morte) eventi['pozioni della morte usate'] = (eventi['pozioni della morte usate'] || 0) + 1;
     bot.forEach((b) => b.close());
     tavolo.close();
     // Togli i bot dalla lobby prima della partita successiva.
@@ -61,7 +80,8 @@ async function main() {
     srv.partita.perToken.clear();
   }
 
-  console.log(`\nRisultati: lupi ${esiti.lupi}, villaggio ${esiti.villaggio}, problemi ${errori}`);
+  console.log(`\nVittorie: ${JSON.stringify(esiti)}  ·  problemi: ${errori}`);
+  console.log(`Eventi: ${JSON.stringify(eventi)}`);
   srv.io.close();
   srv.server.close();
   process.exit(errori ? 1 : 0);
@@ -72,6 +92,7 @@ function controllaFine(s) {
   if (s.giocatori.some((g) => !g.ruolo)) return false;
   const vivi = s.giocatori.filter((g) => g.vivo);
   const lupi = vivi.filter((g) => g.ruolo === 'lupo').length;
+  if (s.vincitore === 'innamorati') return vivi.length === 2 && vivi.every((g) => g.innamorato) && lupi === 1;
   return s.vincitore === 'villaggio' ? lupi === 0 : lupi >= vivi.length - lupi && lupi > 0;
 }
 
