@@ -30,6 +30,8 @@ body[data-fase='alba'] {
 }
 
 * { box-sizing: border-box; }
+/* "hidden" deve vincere anche su regole come button.grande { display: block } */
+[hidden] { display: none !important; }
 html, body {
   min-height: 100dvh;
   margin: 0;
@@ -275,6 +277,55 @@ body.tavolo { font-size: 18px; }
   background: color-mix(in srgb, var(--accento) 14%, var(--pannello));
 }
 .timer.in-pausa { animation: lampeggio 1.6s ease-in-out infinite; }
+
+/* ------------------------------------------------------------ tutorial */
+
+.tutorial-testa { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tutorial-punti { list-style: none; padding: 0; margin: 16px 0 20px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tutorial-punti button {
+  width: 28px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bordo);
+}
+.tutorial-punti button.visto { background: color-mix(in srgb, var(--accento) 45%, var(--bordo)); }
+.tutorial-punti button.attuale { background: var(--accento); width: 44px; }
+.tutorial-scheda {
+  background: var(--pannello);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: clamp(20px, 4vw, 40px);
+  margin-bottom: 20px;
+}
+.tutorial-emoji { font-size: clamp(2.6rem, 6vw, 4rem); line-height: 1; margin-bottom: 12px; }
+.tutorial-scheda h2 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); }
+.tutorial-testo {
+  font-family: Georgia, 'Iowan Old Style', serif;
+  font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 62ch;
+}
+.tutorial-prova { color: var(--accento); margin: 16px 0 0; font-weight: 600; }
+.tutorial-controlli { align-items: center; margin-bottom: 12px; }
+.tutorial-controlli .grande { width: auto; padding-inline: 1.8em; margin-left: auto; }
+.tutorial-controlli button.attiva { background: var(--pannello-2); color: var(--accento); border-color: var(--accento); }
+
+/* tutorial sul telefono */
+.passo-tutorial {
+  padding: 18px;
+  border-radius: var(--raggio);
+  background: var(--pannello);
+  border: 1px solid var(--bordo);
+}
+.passo-tutorial .conta { color: var(--tenue); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 6px; }
+.passo-tutorial h2 { font-size: 1.35rem; }
+.passo-tutorial .testo { color: var(--tenue); margin: 0; }
+.prova { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--bordo); }
+.prova > p:first-child { font-weight: 600; color: var(--accento); margin: 0 0 12px; }
+.prova .carta { margin-bottom: 0; }
 @keyframes lampeggio { 50% { opacity: 0.35; } }
 .storia { margin-top: 24px; color: var(--tenue); }
 .storia summary { cursor: pointer; }

@@ -54,8 +54,31 @@
             <option value="600">10 minuti</option>
           </select>
         </label>
+        <button id="apri-tutorial">📖 Come si gioca</button>
         <button id="avvia" class="grande">Inizia la partita</button>
       </div>
+    </section>
+
+    <section id="tutorial" class="tutorial" hidden>
+      <div class="tutorial-testa">
+        <span id="tutorial-conta" class="nota"></span>
+        <button id="chiudi-tutorial" class="secondario">✕ Chiudi il tutorial</button>
+      </div>
+      <ol id="tutorial-punti" class="tutorial-punti" aria-label="Passi del tutorial"></ol>
+      <div class="tutorial-scheda">
+        <div id="tutorial-emoji" class="tutorial-emoji" aria-hidden="true"></div>
+        <h2 id="tutorial-titolo"></h2>
+        <p id="tutorial-testo" class="tutorial-testo"></p>
+        <p id="tutorial-prova" class="tutorial-prova" hidden>📱 Prova pratica sul telefono</p>
+      </div>
+      <div class="controlli tutorial-controlli">
+        <button id="tutorial-indietro">◀ Indietro</button>
+        <button id="tutorial-rileggi">🔁 Rileggi</button>
+        <button id="tutorial-auto">⏵ Avanti automatico</button>
+        <button id="tutorial-avanti" class="grande">Avanti ▶</button>
+        <button id="tutorial-avvia" class="grande" hidden>Inizia la partita</button>
+      </div>
+      <p class="nota">Si entra ancora da <span id="tutorial-indirizzo"></span>. Frecce ◀ ▶ per spostarsi.</p>
     </section>
 
     <section id="partita" hidden>

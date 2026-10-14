@@ -48,6 +48,19 @@ I file vanno in `public/audio/`: l'elenco di cosa serve e dove trovarlo è in
 [public/audio/LEGGIMI.md](public/audio/LEGGIMI.md). Un file mancante viene saltato, quindi si possono aggiungere poco alla volta.
 Suona solo il tavolo: i telefoni restano muti, così nessun suono tradisce chi sta agendo.
 
+## Tutorial vocale
+
+Nella lobby del tavolo il pulsante **📖 Come si gioca** avvia un tutorial a passi: il narratore spiega
+a voce scopo del gioco, telefono, notte, ruoli, alba, giorno, voto e vittoria, mentre lo schermo mostra il testo
+e l'atmosfera cambia con il passo (sottofondo e colori della notte, dell'alba…).
+
+- Parte in **avanti automatico**: finito un passo si passa al successivo. Si può fermare, tornare indietro,
+  rileggere o saltare a un passo toccando i pallini (anche con le frecce ◀ ▶ della tastiera).
+- Nei passi pratici i **telefoni** fanno provare il gesto: la carta da tenere premuta, la domanda notturna, il voto.
+  Le prove restano sul telefono e non influiscono sulla partita.
+- I ruoli aggiuntivi vengono spiegati solo se sono attivi nella lobby.
+- I testi sono in `src/tutorial.js`; con la voce teatrale vengono preparati in anticipo all'avvio del server.
+
 ## Come si gioca
 
 1. Ognuno entra con il proprio nome; dal tavolo si avvia la partita (minimo 4 giocatori).
@@ -96,6 +109,7 @@ src/partita.js       logica di gioco: fasi, turni, voti, vittoria (il server dec
 src/ruoli.js         ruoli e composizione per numero di giocatori
 src/narratore.js     il copione del narratore (aggiungi qui nuove frasi)
 src/voce.js          voce teatrale: sintesi vocale OpenAI con cache su disco
+src/tutorial.js      testi del tutorial vocale "Come si gioca"
 public/index.html    pagina telefono  (giocatore.js)
 public/tavolo.html   pagina tavolo  (tavolo.js, audio.js per voce, sottofondi ed effetti)
 public/audio/        suoni (elenco in suoni.json, istruzioni in LEGGIMI.md)

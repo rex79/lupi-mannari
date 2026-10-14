@@ -10,6 +10,7 @@ const QRCode = require('qrcode');
 const { Partita } = require('./src/partita');
 const { Voce } = require('./src/voce');
 const N = require('./src/narratore');
+const T = require('./src/tutorial');
 
 const CARTELLA_VOCE = path.join(__dirname, 'cache-voce');
 
@@ -79,10 +80,11 @@ if (require.main === module) {
       console.log('   Voce: quella del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env\n');
       return;
     }
-    console.log(`   Voce teatrale: ${voce.descrizione()}. Preparo in sottofondo le frasi fisse…`);
-    const frasi = N.frasiFisse();
+    console.log(`   Voce teatrale: ${voce.descrizione()}. Preparo in sottofondo tutorial e frasi fisse…`);
+    // Prima il tutorial, che si ascolta in lobby prima di giocare.
+    const frasi = [...T.testi(), ...N.frasiFisse()];
     voce.preparaInAnticipo(frasi).then((fatte) => {
-      console.log(`   Voce teatrale: ${fatte} frasi fisse su ${frasi.length} pronte in cache.\n`);
+      console.log(`   Voce teatrale: ${fatte} frasi su ${frasi.length} pronte in cache.\n`);
     });
   });
 }

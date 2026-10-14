@@ -127,9 +127,31 @@
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => carta.addEventListener(ev, () => gira(false)));
   carta.addEventListener('contextmenu', (e) => e.preventDefault());
 
+  // Carta di prova del tutorial: stesso gesto della carta vera.
+  const cartaProva = (e) => e.target.closest('[data-carta-prova]');
+  $('azione').addEventListener('pointerdown', (e) => {
+    const c = cartaProva(e);
+    if (!c) return;
+    e.preventDefault();
+    c.classList.add('girata');
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerout']) {
+    $('azione').addEventListener(ev, (e) => cartaProva(e)?.classList.remove('girata'));
+  }
+  $('azione').addEventListener('contextmenu', (e) => {
+    if (cartaProva(e)) e.preventDefault();
+  });
+
   $('azione').addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
+    if (b.dataset.prova && stato?.tutorial) {
+      // Scelta di prova: solo locale.
+      proveScelte[stato.tutorial.id] = b.dataset.prova;
+      if (navigator.vibrate) navigator.vibrate(25);
+      render();
+      return;
+    }
     if ('pronto' in b.dataset) {
       invia(null);
       b.disabled = true;
@@ -161,9 +183,10 @@
     if (!dentro || !stato?.io) return;
     const s = stato;
     const me = s.io;
-    document.body.dataset.fase = s.fase;
+    // Nel tutorial i colori seguono il passo (notte, alba, giorno…).
+    document.body.dataset.fase = s.tutorial?.ambiente && s.tutorial.ambiente !== 'lobby' ? s.tutorial.ambiente : s.fase;
     $('mio-nome').textContent = me.nome;
-    const etichetta = s.fase === 'notte' ? `Notte ${s.notte}` : ETICHETTE[s.fase] || '';
+    const etichetta = s.tutorial ? 'Tutorial' : s.fase === 'notte' ? `Notte ${s.notte}` : ETICHETTE[s.fase] || '';
     $('etichetta-fase').textContent = s.inPausa ? `⏸ ${etichetta} · in pausa` : etichetta;
 
     carta.hidden = !me.ruolo;
@@ -213,6 +236,46 @@
     innamorati: 'Vincono gli innamorati 💘',
   };
 
+  // ------------------------------------------------------------- tutorial
+
+  // Prove pratiche: restano sul telefono, il server non ne sa nulla.
+  const proveScelte = {};
+  const DEMO = {
+    scelta: {
+      domanda: 'Chi ti sembra sospetto?',
+      esito: 'Perfetto: di notte si risponde sempre così, anche quando non è il tuo turno.',
+    },
+    voto: {
+      domanda: 'Chi vuoi eliminare?',
+      esito: 'Voto registrato. Finché la votazione è aperta puoi toccare un altro nome per cambiarlo.',
+    },
+  };
+
+  function htmlTutorial(s, me) {
+    const t = s.tutorial;
+    let h = `<div class="passo-tutorial">
+      <p class="conta">📖 Come si gioca · ${t.indice + 1} di ${t.totale}</p>
+      <h2>${t.emoji ? `${t.emoji} ` : ''}${esc(t.titolo)}</h2>
+      <p class="testo">${esc(t.testo)}</p>`;
+    if (t.demo === 'carta') {
+      h += `<div class="prova"><p>Prova: tieni premuta la carta</p>
+        <div class="carta" data-carta-prova>
+          <div class="carta-dorso">Tieni premuto per vedere il tuo ruolo</div>
+          <div class="carta-fronte"><div class="emoji">🌾</div><h2>Contadino</h2>
+            <p>Questa è solo una carta di esempio. Quando inizia la partita qui vedrai il tuo vero ruolo.</p></div>
+        </div></div>`;
+    } else if (DEMO[t.demo]) {
+      const d = DEMO[t.demo];
+      const altri = s.giocatori.filter((g) => g.id !== me.id);
+      const nomi = altri.length >= 2 ? altri.map((g) => ({ id: g.id, nome: g.nome })) : ['Anna', 'Bruno', 'Carla', 'Dario'].map((n) => ({ id: n, nome: n }));
+      const scelto = proveScelte[t.id];
+      h += `<div class="prova"><p>Prova: ${esc(d.domanda)}</p><div class="opzioni">${nomi
+        .map((o) => `<button data-prova="${esc(o.id)}" class="${scelto === o.id ? 'scelto' : ''}">${esc(o.nome)}</button>`)
+        .join('')}</div><p class="conferma">${scelto ? esc(d.esito) : ''}</p></div>`;
+    }
+    return `${h}</div>`;
+  }
+
   function testoAttesa(fase) {
     return (
       {
@@ -227,6 +290,7 @@
   }
 
   function htmlAzione(s, me) {
+    if (s.fase === 'lobby' && s.tutorial) return htmlTutorial(s, me);
     if (s.fase === 'lobby') {
       return `<div class="attesa"><p>Sei dentro! Aspettiamo che il tavolo avvii la partita.</p>
         <button class="secondario" data-esci>Esci</button></div>`;

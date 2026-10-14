@@ -174,6 +174,11 @@ window.Suoni = (() => {
     return true;
   }
 
+  // Interrompe la voce del narratore letta da file (la musica continua).
+  function zittisci() {
+    voceInCorso?.stop();
+  }
+
   function volume(tipo, valore) {
     volumi[tipo] = valore;
     try {
@@ -184,5 +189,5 @@ window.Suoni = (() => {
     if (bus[tipo]) bus[tipo].gain.setTargetAtTime(valore, ctx.currentTime, 0.05);
   }
 
-  return { attiva, attivo, sospendi, ambiente, riprendi, effetto, abbassa, parlaFile, volume, volumi };
+  return { attiva, attivo, sospendi, ambiente, riprendi, effetto, abbassa, parlaFile, zittisci, volume, volumi };
 })();
