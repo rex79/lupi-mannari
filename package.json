@@ -1,0 +1,23 @@
+{
+  "name": "lupi-mannari",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lupi mannari da tavolo: server locale, telefoni come carte segrete e voce narrante.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "bot": "node scripts/bot.js",
+    "simula": "node scripts/simula.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

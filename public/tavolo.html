@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lupi mannari · Tavolo</title>
+  <link rel="stylesheet" href="/stile.css">
+</head>
+<body class="tavolo" data-fase="lobby">
+  <div class="contenitore">
+    <header class="barra-tavolo">
+      <h1>🐺 Lupi mannari</h1>
+      <div class="voce">
+        <select id="voce" aria-label="Voce del narratore"></select>
+        <button id="attiva-voce">🔈 Attiva la voce</button>
+      </div>
+    </header>
+    <p id="errore" class="errore"></p>
+
+    <section id="lobby" hidden>
+      <div class="ingresso-tavolo">
+        <img id="qr" src="/qr.svg" alt="Codice QR per entrare nel gioco">
+        <div>
+          <p>Inquadrate il codice, oppure aprite sul telefono:</p>
+          <p id="indirizzo" class="indirizzo"></p>
+          <p class="nota">I telefoni devono essere collegati alla stessa rete Wi-Fi di questo computer.</p>
+        </div>
+      </div>
+      <h2>Al tavolo <span id="conteggio" class="nota"></span></h2>
+      <ul id="lista-lobby" class="lista-lobby"></ul>
+      <p id="composizione" class="nota"></p>
+      <div class="impostazioni">
+        <label>Discussione
+          <select id="discussione">
+            <option value="60">1 minuto</option>
+            <option value="120">2 minuti</option>
+            <option value="180">3 minuti</option>
+            <option value="240">4 minuti</option>
+            <option value="300">5 minuti</option>
+            <option value="420">7 minuti</option>
+            <option value="600">10 minuti</option>
+          </select>
+        </label>
+        <button id="avvia" class="grande">Inizia la partita</button>
+      </div>
+    </section>
+
+    <section id="partita" hidden>
+      <div class="intestazione-fase"><h2 id="titolo-fase"></h2><div id="timer" class="timer"></div></div>
+      <p id="narrazione" class="narrazione-grande"></p>
+      <p id="progresso" class="nota"></p>
+      <div id="griglia" class="griglia"></div>
+      <div id="voti" class="voti"></div>
+      <div class="controlli">
+        <button id="al-voto">Passa al voto ⏭</button>
+        <button id="nuova" class="secondario">Nuova partita</button>
+      </div>
+      <details class="storia"><summary>Cronaca della partita</summary><ol id="storia"></ol></details>
+    </section>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/tavolo.js"></script>
+</body>
+</html>

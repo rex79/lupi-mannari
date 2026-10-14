@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14151c">
+  <title>Lupi mannari</title>
+  <link rel="stylesheet" href="/stile.css">
+</head>
+<body class="giocatore" data-fase="lobby">
+  <main>
+    <section id="ingresso" hidden>
+      <h1 class="logo">🐺 Lupi mannari</h1>
+      <form id="form-ingresso">
+        <label for="nome">Come ti chiami?</label>
+        <input id="nome" maxlength="20" autocomplete="nickname" required>
+        <button type="submit" class="grande">Entra nel villaggio</button>
+      </form>
+      <p id="errore" class="errore"></p>
+    </section>
+
+    <section id="gioco" hidden>
+      <header class="barra"><strong id="mio-nome"></strong><span id="etichetta-fase"></span></header>
+      <div id="carta" class="carta" hidden>
+        <div class="carta-dorso">Tieni premuto per vedere il tuo ruolo</div>
+        <div class="carta-fronte" id="carta-fronte"></div>
+      </div>
+      <p id="narrazione" class="narrazione"></p>
+      <div id="azione"></div>
+      <ul id="elenco" class="elenco"></ul>
+    </section>
+
+    <p id="connessione" class="connessione" hidden>Connessione persa, riprovo…</p>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/giocatore.js"></script>
+</body>
+</html>
