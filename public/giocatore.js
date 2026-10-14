@@ -163,7 +163,8 @@
     const me = s.io;
     document.body.dataset.fase = s.fase;
     $('mio-nome').textContent = me.nome;
-    $('etichetta-fase').textContent = s.fase === 'notte' ? `Notte ${s.notte}` : ETICHETTE[s.fase] || '';
+    const etichetta = s.fase === 'notte' ? `Notte ${s.notte}` : ETICHETTE[s.fase] || '';
+    $('etichetta-fase').textContent = s.inPausa ? `⏸ ${etichetta} · in pausa` : etichetta;
 
     carta.hidden = !me.ruolo;
     if (me.ruolo) $('carta-fronte').innerHTML = htmlCarta(s, me);

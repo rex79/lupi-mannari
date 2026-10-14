@@ -266,6 +266,16 @@ body.tavolo { font-size: 18px; }
 .pedina.offline .nome::after { content: ' ⚠︎'; color: var(--lupo); }
 .voti { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--tenue); margin-bottom: 16px; }
 .controlli { display: flex; gap: 10px; flex-wrap: wrap; }
+.controlli button.attiva { background: var(--accento); color: #1a1408; border-color: transparent; font-weight: 700; }
+.banner-pausa {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--accento);
+  background: color-mix(in srgb, var(--accento) 14%, var(--pannello));
+}
+.timer.in-pausa { animation: lampeggio 1.6s ease-in-out infinite; }
+@keyframes lampeggio { 50% { opacity: 0.35; } }
 .storia { margin-top: 24px; color: var(--tenue); }
 .storia summary { cursor: pointer; }
 .esito-tavolo.lupi { color: var(--lupo); }

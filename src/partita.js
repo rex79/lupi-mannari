@@ -97,6 +97,8 @@ class Partita {
     this.ultimaProtezione = null;
     this.ultimoVoto = null;
     this.saltaDiscussione = false;
+    this.pausa = null; // { da } quando il tavolo ha messo in pausa
+    this.minimo = null;
     this.vittimaNotte = null; // scelta dei lupi, mostrata alla strega
     this.pozioni = { vita: true, morte: true };
     this.coppia = null; // [id, id] scelti da Cupido
@@ -142,8 +144,13 @@ class Partita {
       this.trasmetti();
     });
     tavolo('tavolo:alVoto', () => {
-      if (this.fase === 'giorno') this.saltaDiscussione = true;
+      if (this.fase !== 'giorno') return;
+      this.saltaDiscussione = true;
+      this.riprendi(); // "passa al voto" vale anche come ripresa
     });
+    tavolo('tavolo:pausa', () => this.mettiInPausa());
+    tavolo('tavolo:riprendi', () => this.riprendi());
+    tavolo('tavolo:allunga', () => this.allunga(60000));
     tavolo('tavolo:nuovaPartita', () => {
       this.azzera();
       this.trasmetti();
@@ -371,7 +378,9 @@ class Partita {
       sottofase: this.sottofase,
       notte: this.notte,
       narrazione: this.narrazione,
-      restanteMs: this.scadenza ? Math.max(0, this.scadenza - Date.now()) : null,
+      // In pausa il tempo restante resta fermo a quello del momento della pausa.
+      restanteMs: this.scadenza ? Math.max(0, this.scadenza - (this.pausa?.da ?? Date.now())) : null,
+      inPausa: Boolean(this.pausa),
       vincitore: this.vincitore,
       impostazioni: this.impostazioni,
       minGiocatori: this.minGiocatori,
@@ -455,6 +464,7 @@ class Partita {
   // Il narratore parla sul tavolo; si prosegue quando il tavolo ha finito di leggere.
   // "suono" è il nome di un effetto da suonare prima della frase (vedi public/audio/suoni.json).
   async narra(run, testo, suono = null) {
+    await this.attendiRipresa(run);
     this.controlla(run);
     const id = ++this.narrId;
     const tavoli = this.io.sockets.adapter.rooms.get('tavolo')?.size ?? 0;
@@ -482,18 +492,55 @@ class Partita {
   }
 
   // Aspetta che "fatto()" sia vero (ma almeno "min") oppure che scada "max".
+  // In pausa il tempo si ferma: le scadenze vengono spostate in avanti alla ripresa.
   async attendi(run, { min = 0, max, fatto = () => false }) {
-    const inizio = Date.now();
-    this.scadenza = inizio + max;
+    // Se si parte già in pausa, il conto parte dall'inizio della pausa: alla ripresa
+    // le scadenze vengono spostate in avanti e il tempo pieno resta intatto.
+    const ora = this.pausa?.da ?? Date.now();
+    this.scadenza = ora + max;
+    this.minimo = ora + min;
     this.trasmetti();
     for (;;) {
       this.controlla(run);
-      const trascorso = Date.now() - inizio;
-      if (trascorso >= max) break;
-      if (trascorso >= min && fatto()) break;
+      if (!this.pausa) {
+        const adesso = Date.now();
+        if (adesso >= this.scadenza) break;
+        if (adesso >= this.minimo && fatto()) break;
+      }
       await dormi(100);
     }
     this.scadenza = null;
+    this.minimo = null;
+  }
+
+  // Se il tavolo ha messo in pausa, il narratore aspetta prima della frase successiva.
+  async attendiRipresa(run) {
+    while (this.pausa) {
+      this.controlla(run);
+      await dormi(100);
+    }
+  }
+
+  mettiInPausa() {
+    if (this.pausa || this.fase === 'lobby' || this.fase === 'fine') return;
+    this.pausa = { da: Date.now() };
+    this.trasmetti();
+  }
+
+  riprendi() {
+    if (!this.pausa) return;
+    const durata = Date.now() - this.pausa.da;
+    if (this.scadenza) this.scadenza += durata;
+    if (this.minimo) this.minimo += durata;
+    this.pausa = null;
+    this.trasmetti();
+  }
+
+  // Tempo extra per discussione e votazione.
+  allunga(ms) {
+    if (!this.scadenza || !['giorno', 'voto'].includes(this.fase)) return;
+    this.scadenza += ms;
+    this.trasmetti();
   }
 
   async ciclo(run) {

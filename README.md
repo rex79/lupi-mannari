@@ -59,7 +59,11 @@ Suona solo il tavolo: i telefoni restano muti, così nessun suono tradisce chi s
 4. **Alba**: il narratore annuncia i morti della notte e ne rivela il ruolo, senza dire chi li ha uccisi.
 5. **Giorno**: discussione a tempo (dal tavolo si può passare subito al voto), poi voto sul telefono.
    In caso di parità nessuno viene eliminato.
-6. Vincono i lupi quando sono tanti quanti gli altri; vince il villaggio quando non resta nessun lupo.
+6. **Pausa**: in qualsiasi momento il tavolo può mettere in pausa con il pulsante ⏸ o la barra spaziatrice.
+   Il tempo si ferma e il narratore attende dopo la frase in corso; alla ripresa si riparte dal tempo rimasto.
+   Utile per il roleplay prima del voto. Con **+1 minuto** si allungano discussione e votazione,
+   e **Passa al voto** chiude la discussione anche durante la pausa. Sui telefoni compare "in pausa".
+7. Vincono i lupi quando sono tanti quanti gli altri; vince il villaggio quando non resta nessun lupo.
 
 ### Ruoli aggiuntivi
 
