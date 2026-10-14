@@ -13,7 +13,7 @@
   const CHIAVE = 'lupi-mannari-token';
   const ETICHETTE = {
     lobby: 'In attesa', ruoli: 'Ruoli', notte: 'Notte', alba: 'Alba',
-    giorno: 'Giorno', voto: 'Votazione', verdetto: 'Verdetto', fine: 'Fine',
+    giorno: 'Giorno', voto: 'Votazione', verdetto: 'Verdetto', sparo: 'Cacciatore', fine: 'Fine',
   };
 
   let token = memoria.leggi(CHIAVE);
@@ -88,6 +88,16 @@
       token = null;
       memoria.scrivi(CHIAVE, null);
       esci('');
+    } else if (b.dataset.bersaglio && stato?.io?.azione?.multipla) {
+      // Scelta multipla (Cupido): tocca per aggiungere o togliere.
+      const a = stato.io.azione;
+      const id = b.dataset.bersaglio;
+      let scelti = a.scelta.includes(id) ? a.scelta.filter((x) => x !== id) : [...a.scelta, id];
+      if (scelti.length > a.multipla) scelti = scelti.slice(-a.multipla);
+      a.scelta = scelti;
+      socket.emit('giocatore:azione', scelti);
+      b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('scelto', scelti.includes(x.dataset.bersaglio)));
+      if (navigator.vibrate) navigator.vibrate(25);
     } else if (b.dataset.bersaglio) {
       socket.emit('giocatore:azione', b.dataset.bersaglio);
       b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('scelto', x === b));
@@ -134,8 +144,23 @@
         .map((i) => `${esc(i.nome)} ${i.lupo ? '🐺' : '✔︎'}`)
         .join(' · ')}</p>`;
     }
+    if (me.pozioni) {
+      const restano = [me.pozioni.vita && '💚 vita', me.pozioni.morte && '☠️ morte'].filter(Boolean);
+      h += `<p class="dettaglio">Pozioni: ${restano.length ? restano.join(' · ') : 'finite'}</p>`;
+    }
+    if (me.innamorato) h += `<p class="dettaglio">${htmlAmore(me)}</p>`;
     return h;
   }
+
+  function htmlAmore(me) {
+    return `💘 Sei innamorato di <strong>${esc(me.innamorato.nome)}</strong>${me.innamorato.vivo ? '' : ' †'}. Se uno dei due muore, muore anche l’altro.`;
+  }
+
+  const TITOLI_FINE = {
+    lupi: 'Vincono i lupi mannari 🐺',
+    villaggio: 'Vince il villaggio 🌾',
+    innamorati: 'Vincono gli innamorati 💘',
+  };
 
   function testoAttesa(fase) {
     return (
@@ -145,6 +170,7 @@
         alba: 'Sta sorgendo il sole…',
         giorno: 'Discutete! Chi è il lupo mannaro?',
         verdetto: 'Il villaggio ha votato…',
+        sparo: 'Il cacciatore prende la mira…',
       }[fase] || 'Attendi…'
     );
   }
@@ -155,25 +181,30 @@
         <button class="secondario" data-esci>Esci</button></div>`;
     }
     if (s.fase === 'fine') {
-      const mia = me.ruolo ? s.catalogo[me.ruolo].squadra : null;
-      const titolo = s.vincitore === 'lupi' ? 'Vincono i lupi mannari 🐺' : 'Vince il villaggio 🌾';
-      return `<div class="esito ${s.vincitore}"><h2>${titolo}</h2>
-        <p>${mia === s.vincitore ? 'Hai vinto!' : 'Hai perso, sarà per la prossima.'}</p></div>`;
-    }
-    if (!me.vivo) {
-      return '<div class="fuori"><h2>Sei fuori dal gioco</h2><p>Da adesso niente parole né facce fino alla fine 🤫</p></div>';
+      return `<div class="esito ${s.vincitore}"><h2>${TITOLI_FINE[s.vincitore]}</h2>
+        <p>${me.vinto ? 'Hai vinto!' : 'Hai perso, sarà per la prossima.'}</p></div>`;
     }
     const a = me.azione;
-    if (!a) return `<div class="attesa"><p>${testoAttesa(s.fase)}</p></div>`;
+    // Un cacciatore appena morto ha ancora un'azione: per questo il controllo "vivo" viene dopo.
+    if (!a && !me.vivo) {
+      return '<div class="fuori"><h2>Sei fuori dal gioco</h2><p>Da adesso niente parole né facce fino alla fine 🤫</p></div>';
+    }
+    if (!a) {
+      const amore = me.innamorato && s.fase === 'notte' ? `<p class="dettaglio">${htmlAmore(me)}</p>` : '';
+      return `<div class="attesa"><p>${testoAttesa(s.fase)}</p>${amore}</div>`;
+    }
     if (a.tipo === 'pronto') {
       return `<div class="attesa"><p>Tieni premuta la carta qui sopra per vedere il tuo ruolo.</p>
         <button class="grande" data-pronto>Ho visto, sono pronto</button></div>`;
     }
 
-    let h = `<h2>${esc(a.titolo)}</h2><div class="opzioni">`;
+    let h = `<h2>${esc(a.titolo)}</h2>`;
+    if (a.sottotitolo) h += `<p class="sottotitolo">${esc(a.sottotitolo)}</p>`;
+    h += '<div class="opzioni">';
     h += a.opzioni
       .map((o) => {
-        const scelto = a.scelta === o.id ? 'scelto' : '';
+        const preso = a.multipla ? a.scelta.includes(o.id) : a.scelta === o.id;
+        const scelto = preso ? 'scelto' : '';
         const off = a.bloccata && a.scelta ? 'disabled' : '';
         return `<button data-bersaglio="${esc(o.id)}" class="${scelto}" ${off}>${esc(o.nome)}</button>`;
       })
@@ -186,6 +217,9 @@
     }
     if (a.esito) {
       h += `<p class="rivelazione">${esc(a.esito.nome)} ${a.esito.lupo ? 'è un lupo mannaro! 🐺' : 'non è un lupo.'}</p>`;
+    } else if (a.multipla) {
+      const n = a.scelta.length;
+      h += `<p class="conferma">${n === a.multipla ? 'Coppia scelta ✓' : `Scelti ${n} di ${a.multipla}`}</p>`;
     } else {
       h += `<p class="conferma">${a.scelta ? 'Scelta registrata ✓' : ''}</p>`;
     }

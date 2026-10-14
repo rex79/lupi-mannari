@@ -7,6 +7,7 @@
   --accento: #e2a43f;
   --lupo: #d4574c;
   --villaggio: #78b06f;
+  --amore: #e57ba4;
   --bordo: #353849;
   --raggio: 14px;
   color-scheme: dark;
@@ -127,6 +128,8 @@ body.giocatore main {
 }
 
 #azione h2 { font-size: 1.3rem; }
+.sottotitolo { color: var(--tenue); margin: -0.2em 0 14px; }
+.attesa .dettaglio { color: var(--amore); margin-top: 12px; }
 .opzioni { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .opzioni button { padding: 1em 0.6em; overflow-wrap: anywhere; }
 .opzioni button.scelto { border-color: var(--accento); background: color-mix(in srgb, var(--accento) 22%, var(--pannello-2)); }
@@ -238,6 +241,18 @@ body.tavolo { font-size: 18px; }
 .storia summary { cursor: pointer; }
 .esito-tavolo.lupi { color: var(--lupo); }
 .esito-tavolo.villaggio { color: var(--villaggio); }
+.esito-tavolo.innamorati, .esito.innamorati h2 { color: var(--amore); }
+
+.extra {
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: 10px 16px 14px;
+  margin: 20px 0 0;
+}
+.extra legend { color: var(--tenue); padding: 0 6px; }
+#ruoli-extra { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.scelta-extra { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.scelta-extra input { width: 18px; height: 18px; accent-color: var(--accento); }
 
 @media (max-width: 640px) {
   .ingresso-tavolo { flex-direction: column; text-align: center; }

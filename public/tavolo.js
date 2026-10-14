@@ -131,8 +131,19 @@
   // --------------------------------------------------------------- disegno
 
   const TITOLI = {
-    ruoli: 'I ruoli', alba: 'Alba', giorno: 'Giorno', voto: 'Votazione', verdetto: 'Verdetto',
+    ruoli: 'I ruoli', alba: 'Alba', giorno: 'Giorno', voto: 'Votazione', verdetto: 'Verdetto', sparo: 'Il cacciatore',
   };
+  const TITOLI_FINE = {
+    lupi: 'Vincono i lupi mannari',
+    villaggio: 'Vince il villaggio',
+    innamorati: 'Vincono gli innamorati',
+  };
+
+  // Ruoli aggiuntivi attivabili dalla lobby.
+  $('ruoli-extra').addEventListener('change', () => {
+    const extra = [...$('ruoli-extra').querySelectorAll('input:checked')].map((i) => i.value);
+    socket.emit('tavolo:impostazioni', { extra });
+  });
 
   function ruoliInGioco(conteggio, catalogo) {
     return Object.keys(catalogo)
@@ -165,6 +176,14 @@
         .join('') || '<li class="nota">Ancora nessuno… inquadrate il QR!</li>';
     $('composizione').textContent = n ? `Ruoli con ${n} giocatori: ${ruoliInGioco(s.conteggioRuoli, s.catalogo)}` : '';
     $('discussione').value = String(s.impostazioni.discussioneSec);
+    $('ruoli-extra').innerHTML = s.ruoliExtra
+      .map((r) => {
+        const info = s.catalogo[r];
+        const on = s.impostazioni.extra.includes(r) ? 'checked' : '';
+        return `<label class="scelta-extra" title="${esc(info.descrizione)}">
+          <input type="checkbox" value="${r}" ${on}> ${info.emoji} ${esc(info.nome)}</label>`;
+      })
+      .join('');
     $('avvia').disabled = n < s.minGiocatori;
   }
 
@@ -172,7 +191,7 @@
     const titolo = $('titolo-fase');
     titolo.className = '';
     if (s.fase === 'fine') {
-      titolo.textContent = s.vincitore === 'lupi' ? 'Vincono i lupi mannari' : 'Vince il villaggio';
+      titolo.textContent = TITOLI_FINE[s.vincitore];
       titolo.className = `esito-tavolo ${s.vincitore}`;
     } else {
       titolo.textContent = s.fase === 'notte' ? `Notte ${s.notte}` : TITOLI[s.fase] || '';
@@ -188,7 +207,7 @@
       .map((g) => {
         const r = g.ruolo ? s.catalogo[g.ruolo] : null;
         const cls = ['pedina', g.vivo ? '' : 'eliminata', g.connesso ? '' : 'offline'].join(' ');
-        return `<div class="${cls}"><span class="nome">${esc(g.nome)}</span>
+        return `<div class="${cls}"><span class="nome">${esc(g.nome)}${g.innamorato ? ' 💘' : ''}</span>
           <span class="ruolo">${r ? `${r.emoji} ${esc(r.nome)}` : g.vivo ? 'vivo' : ''}</span></div>`;
       })
       .join('');
