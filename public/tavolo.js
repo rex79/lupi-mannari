@@ -65,8 +65,9 @@
     cursore.addEventListener('input', () => Suoni.volume(tipo, Number(cursore.value)));
   }
 
-  $('attiva-voce').addEventListener('click', async () => {
-    audioAttivo = !audioAttivo;
+  // Va chiamata da un clic (regola dei browser per l'audio).
+  async function impostaAudio(si) {
+    audioAttivo = si;
     $('attiva-voce').classList.toggle('attiva', audioAttivo);
     $('attiva-voce').textContent = audioAttivo ? '🔊 Audio attivo' : '🔈 Attiva l’audio';
     if (audioAttivo) {
@@ -80,7 +81,8 @@
       if (sintesi) sintesi.cancel();
       await Suoni.sospendi();
     }
-  });
+  }
+  $('attiva-voce').addEventListener('click', () => impostaAudio(!audioAttivo));
 
   function diUnaFrase(frase) {
     return new Promise((fine) => {
@@ -99,12 +101,14 @@
   }
 
   // Voce del browser, frase per frase: Chrome tronca le letture troppo lunghe.
-  async function parlaBrowser(testo) {
+  // "annullato" permette di interrompere la lettura (serve al tutorial quando si cambia passo).
+  async function parlaBrowser(testo, annullato = () => false) {
     if (!sintesi) return dormi(1200 + testo.length * 45);
     Suoni.abbassa(true);
     try {
       const frasi = testo.match(/[^.!?]+[.!?]*/g) || [testo];
       for (const f of frasi) {
+        if (annullato()) break;
         if (f.trim()) await diUnaFrase(f.trim());
         await dormi(150);
       }
@@ -129,9 +133,114 @@
       .then(() => socket.emit('tavolo:narrazioneFinita', id));
   });
 
+  // ------------------------------------------------------------- tutorial
+
+  // Il narratore legge il passo mostrato. Cambiare passo interrompe la lettura in corso.
+  // Con "avanti automatico" a fine lettura si passa da soli al passo successivo.
+  let letturaTutorial = 0;
+  let tutorialAuto = false;
+  let passoLetto = null;
+
+  function zittisci() {
+    letturaTutorial += 1;
+    Suoni.zittisci();
+    if (sintesi) sintesi.cancel();
+  }
+
+  async function leggiPasso(t) {
+    zittisci();
+    const mio = letturaTutorial;
+    const annullato = () => mio !== letturaTutorial;
+    passoLetto = t.id;
+    try {
+      if (audioAttivo) {
+        const durata = await Suoni.effetto(t.suono);
+        if (durata) await dormi(Math.min(durata, 2) * 1000);
+        if (annullato()) return;
+        const { audio } = await new Promise((r) =>
+          socket.timeout(10000).emit('tavolo:audioTutorial', t.id, (err, x) => r(err ? {} : x || {})),
+        );
+        if (annullato()) return;
+        const letta = audio ? await Suoni.parlaFile(audio) : false;
+        if (!letta && !annullato()) await parlaBrowser(t.testo, annullato);
+      } else {
+        // Senza audio si lascia il tempo di leggere lo schermo.
+        await dormi(2500 + t.testo.length * 55);
+      }
+    } catch (e) {
+      console.error('Tutorial:', e);
+    }
+    if (annullato() || !tutorialAuto) return;
+    if (t.indice >= t.totale - 1) return impostaAuto(false);
+    await dormi(1200);
+    if (!annullato() && tutorialAuto) socket.emit('tavolo:tutorial', { azione: 'avanti', da: t.id });
+  }
+
+  function impostaAuto(si) {
+    tutorialAuto = si;
+    $('tutorial-auto').classList.toggle('attiva', si);
+    $('tutorial-auto').textContent = si ? '⏸ Ferma l’automatico' : '⏵ Avanti automatico';
+  }
+
+  const tutorial = (azione, extra = {}) => socket.emit('tavolo:tutorial', { azione, ...extra });
+  $('apri-tutorial').addEventListener('click', async () => {
+    // Il tutorial è fatto per essere ascoltato: se l'audio è spento lo accende.
+    if (!audioAttivo) await impostaAudio(true);
+    impostaAuto(true);
+    tutorial('apri');
+  });
+  $('chiudi-tutorial').addEventListener('click', () => {
+    impostaAuto(false);
+    zittisci();
+    tutorial('chiudi');
+  });
+  $('tutorial-avanti').addEventListener('click', () => tutorial('avanti'));
+  $('tutorial-indietro').addEventListener('click', () => tutorial('indietro'));
+  $('tutorial-rileggi').addEventListener('click', () => stato?.tutorial && leggiPasso(stato.tutorial));
+  $('tutorial-auto').addEventListener('click', () => {
+    impostaAuto(!tutorialAuto);
+    // Riattivato a lettura finita: si riparte subito dal passo successivo.
+    if (tutorialAuto && stato?.tutorial) leggiPasso(stato.tutorial);
+  });
+  $('tutorial-punti').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-indice]');
+    if (b) tutorial('vai', { indice: Number(b.dataset.indice) });
+  });
+  $('tutorial-avvia').addEventListener('click', () => $('avvia').click());
+  document.addEventListener('keydown', (e) => {
+    if (!stato?.tutorial || e.target.closest('input, select, textarea')) return;
+    if (e.key === 'ArrowRight') tutorial('avanti');
+    if (e.key === 'ArrowLeft') tutorial('indietro');
+  });
+
+  function renderTutorial(s) {
+    const t = s.tutorial;
+    $('tutorial-conta').textContent = `Come si gioca · passo ${t.indice + 1} di ${t.totale}`;
+    $('tutorial-punti').innerHTML = t.titoli
+      .map(
+        (titolo, i) =>
+          `<li><button data-indice="${i}" class="${i === t.indice ? 'attuale' : i < t.indice ? 'visto' : ''}" ` +
+          `title="${esc(titolo)}" aria-label="${i + 1}. ${esc(titolo)}"></button></li>`,
+      )
+      .join('');
+    $('tutorial-emoji').textContent = t.emoji || '';
+    $('tutorial-titolo').textContent = t.titolo;
+    $('tutorial-testo').textContent = t.testo;
+    $('tutorial-prova').hidden = !t.demo;
+    $('tutorial-indietro').disabled = t.indice === 0;
+    const ultimo = t.indice === t.totale - 1;
+    $('tutorial-avanti').hidden = ultimo;
+    $('tutorial-avvia').hidden = !ultimo;
+    $('tutorial-avvia').disabled = s.giocatori.length < s.minGiocatori;
+    $('tutorial-indirizzo').textContent = $('indirizzo').textContent;
+    if (t.id !== passoLetto) leggiPasso(t);
+  }
+
   // ------------------------------------------------------------- comandi
 
   $('avvia').addEventListener('click', () => {
+    impostaAuto(false);
+    zittisci();
     socket.emit('tavolo:avvia', (r = {}) => { $('errore').textContent = r.errore || ''; });
   });
   $('discussione').addEventListener('change', (e) => {
@@ -197,6 +306,7 @@
   // Quale sottofondo suona in ogni fase (i nomi sono quelli di public/audio/suoni.json).
   function sottofondo(s) {
     if (s.fase === 'fine') return `fine-${s.vincitore}`;
+    if (s.tutorial) return s.tutorial.ambiente ?? undefined; // il tutorial cambia atmosfera con i passi
     return (
       { lobby: 'lobby', ruoli: 'lobby', notte: 'notte', alba: 'alba', giorno: 'giorno', voto: 'voto', verdetto: 'voto' }[s.fase] ??
       undefined // "sparo": resta il sottofondo di prima
@@ -206,12 +316,21 @@
   function render() {
     const s = stato;
     if (!s) return;
-    document.body.dataset.fase = s.fase;
+    // Nel tutorial i colori seguono il passo (notte, alba, giorno…).
+    document.body.dataset.fase = s.tutorial?.ambiente && s.tutorial.ambiente !== 'lobby' ? s.tutorial.ambiente : s.fase;
     const traccia = sottofondo(s);
     if (traccia !== undefined) Suoni.ambiente(traccia);
     const inLobby = s.fase === 'lobby';
-    $('lobby').hidden = !inLobby;
+    $('lobby').hidden = !inLobby || Boolean(s.tutorial);
+    $('tutorial').hidden = !s.tutorial;
     $('partita').hidden = inLobby;
+    if (s.tutorial) renderTutorial(s);
+    else if (passoLetto) {
+      // Tutorial chiuso (anche da un altro tavolo): si ferma la lettura.
+      passoLetto = null;
+      impostaAuto(false);
+      zittisci();
+    }
     if (inLobby) renderLobby(s);
     else renderPartita(s);
   }

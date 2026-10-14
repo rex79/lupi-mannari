@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { RUOLI, RUOLI_EXTRA, EXTRA_PREDEFINITI, ORDINE_NOTTE, composizione, conta } = require('./ruoli');
 const N = require('./narratore');
+const T = require('./tutorial');
 
 // Tempi base in millisecondi (moltiplicati per "scalaTempi", utile nei test).
 const TEMPI_BASE = {
@@ -98,6 +99,7 @@ class Partita {
     this.ultimoVoto = null;
     this.saltaDiscussione = false;
     this.pausa = null; // { da } quando il tavolo ha messo in pausa
+    this.tutorial = null; // { id } del passo mostrato, solo in lobby
     this.minimo = null;
     this.vittimaNotte = null; // scelta dei lupi, mostrata alla strega
     this.pozioni = { vita: true, morte: true };
@@ -140,8 +142,16 @@ class Partita {
       }
       if (Array.isArray(imp?.extra)) {
         this.impostazioni.extra = RUOLI_EXTRA.filter((r) => imp.extra.includes(r));
+        this.allineaTutorial();
       }
       this.trasmetti();
+    });
+    tavolo('tavolo:tutorial', (comando) => this.comandoTutorial(comando || {}));
+    // Il file audio di un passo del tutorial (null senza voce teatrale o se tarda troppo).
+    tavolo('tavolo:audioTutorial', async (id, cb) => {
+      const p = T.passo(id);
+      const audio = p && this.voce ? await this.voce.preparaEntro(p.testo, 8000) : null;
+      rispondi(cb, { audio });
     });
     tavolo('tavolo:alVoto', () => {
       if (this.fase !== 'giorno') return;
@@ -381,6 +391,7 @@ class Partita {
       // In pausa il tempo restante resta fermo a quello del momento della pausa.
       restanteMs: this.scadenza ? Math.max(0, this.scadenza - (this.pausa?.da ?? Date.now())) : null,
       inPausa: Boolean(this.pausa),
+      tutorial: this.tutorialPubblico(),
       vincitore: this.vincitore,
       impostazioni: this.impostazioni,
       minGiocatori: this.minGiocatori,
@@ -441,12 +452,58 @@ class Partita {
     if (this.storia.length > 40) this.storia.shift();
   }
 
+  // ---------------------------------------------------------------- tutorial
+
+  // Comandi dal tavolo: apri, chiudi, avanti, indietro, vai (a un indice).
+  // "avanti" con "da" avanza solo se si è ancora su quel passo (evita salti doppi).
+  comandoTutorial({ azione, da, indice }) {
+    if (this.fase !== 'lobby') return;
+    const passi = T.passiAttivi(this.impostazioni.extra);
+    const i = this.tutorial ? passi.findIndex((p) => p.id === this.tutorial.id) : -1;
+    if (azione === 'apri') this.tutorial = { id: passi[0].id };
+    else if (azione === 'chiudi') this.tutorial = null;
+    else if (!this.tutorial) return;
+    else if (azione === 'avanti' && (!da || da === this.tutorial.id) && i < passi.length - 1) this.tutorial.id = passi[i + 1].id;
+    else if (azione === 'indietro' && i > 0) this.tutorial.id = passi[i - 1].id;
+    else if (azione === 'vai' && passi[indice]) this.tutorial.id = passi[indice].id;
+    this.trasmetti();
+  }
+
+  // Se si disattiva il ruolo del passo mostrato, si passa al passo attivo successivo.
+  allineaTutorial() {
+    if (!this.tutorial) return;
+    const attivi = new Set(T.passiAttivi(this.impostazioni.extra).map((p) => p.id));
+    if (attivi.has(this.tutorial.id)) return;
+    const dopo = T.PASSI.slice(T.PASSI.findIndex((p) => p.id === this.tutorial.id)).find((p) => attivi.has(p.id));
+    this.tutorial.id = dopo?.id ?? T.PASSI[0].id;
+  }
+
+  tutorialPubblico() {
+    if (!this.tutorial || this.fase !== 'lobby') return null;
+    const passi = T.passiAttivi(this.impostazioni.extra);
+    const indice = Math.max(0, passi.findIndex((p) => p.id === this.tutorial.id));
+    const p = passi[indice];
+    return {
+      indice,
+      totale: passi.length,
+      titoli: passi.map((x) => x.titolo),
+      id: p.id,
+      titolo: p.titolo,
+      emoji: p.emoji,
+      testo: p.testo,
+      demo: p.demo ?? null,
+      ambiente: p.ambiente ?? null,
+      suono: p.suono ?? null,
+    };
+  }
+
   // ------------------------------------------------------------------- ciclo
 
   avvia() {
     if (this.fase !== 'lobby') return 'La partita è già in corso.';
     const lista = [...this.giocatori.values()];
     if (lista.length < this.minGiocatori) return `Servono almeno ${this.minGiocatori} giocatori.`;
+    this.tutorial = null; // la partita vera chiude il tutorial
     const ruoli = mescola(composizione(lista.length, this.impostazioni.extra));
     lista.forEach((p, i) => Object.assign(p, { ruolo: ruoli[i], vivo: true, pronto: false, indagini: [] }));
     this.conteggioRuoli = conta(ruoli);
