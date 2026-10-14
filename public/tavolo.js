@@ -142,6 +142,19 @@
     if (b && confirm(`Togliere ${b.dataset.nome} dal tavolo?`)) socket.emit('tavolo:espelli', b.dataset.espelli);
   });
   $('al-voto').addEventListener('click', () => socket.emit('tavolo:alVoto'));
+  $('allunga').addEventListener('click', () => socket.emit('tavolo:allunga'));
+
+  function pausaORipresa() {
+    if (!stato || stato.fase === 'lobby' || stato.fase === 'fine') return;
+    socket.emit(stato.inPausa ? 'tavolo:riprendi' : 'tavolo:pausa');
+  }
+  $('pausa').addEventListener('click', pausaORipresa);
+  // Barra spaziatrice = pausa/riprendi, comodo per il narratore (tranne mentre si scrive in un campo).
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || e.repeat || e.target.closest('input, select, textarea, button, summary')) return;
+    e.preventDefault();
+    pausaORipresa();
+  });
   $('nuova').addEventListener('click', () => {
     if (stato?.fase === 'fine' || confirm('Interrompere la partita e tornare alla lobby?')) {
       if (sintesi) sintesi.cancel();
@@ -256,18 +269,31 @@
       : '';
 
     $('al-voto').hidden = s.fase !== 'giorno';
+    $('pausa').hidden = s.fase === 'fine';
+    $('pausa').textContent = s.inPausa ? '▶︎ Riprendi' : '⏸ Pausa';
+    $('pausa').classList.toggle('attiva', s.inPausa);
+    $('allunga').hidden = !['giorno', 'voto'].includes(s.fase) || s.restanteMs == null;
+    $('banner-pausa').hidden = !s.inPausa;
     $('nuova').textContent = s.fase === 'fine' ? 'Nuova partita' : 'Interrompi';
     $('storia').innerHTML = s.storia.map((t) => `<li>${esc(t)}</li>`).join('');
   }
 
-  // Timer aggiornato in locale.
+  // Timer aggiornato in locale; in pausa resta fermo.
+  const formatta = (ms) => {
+    const sec = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  };
   setInterval(() => {
     const el = $('timer');
-    if (scadenzaLocale == null || !stato || stato.fase === 'lobby') {
+    el.classList.toggle('in-pausa', Boolean(stato?.inPausa));
+    if (!stato || stato.fase === 'lobby') {
       el.textContent = '';
-      return;
+    } else if (stato.inPausa) {
+      el.textContent = stato.restanteMs != null ? `⏸ ${formatta(stato.restanteMs)}` : '⏸';
+    } else if (scadenzaLocale != null) {
+      el.textContent = formatta(scadenzaLocale - performance.now());
+    } else {
+      el.textContent = '';
     }
-    const sec = Math.max(0, Math.ceil((scadenzaLocale - performance.now()) / 1000));
-    el.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   }, 250);
 })();
