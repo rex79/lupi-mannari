@@ -617,6 +617,10 @@ class Partita {
       for (const ruolo of ORDINE_NOTTE) {
         if (!this.conteggioRuoli[ruolo]) continue; // ruolo mai stato in gioco
         if (ruolo === 'cupido' && this.notte > 1) continue; // Cupido agisce solo la prima notte
+        // Un ruolo senza giocatori vivi non viene più chiamato: il suo ruolo è già stato
+        // rivelato alla morte, quindi saltarlo non svela niente a nessuno.
+        // (Chi muore stanotte agisce comunque: le morti si applicano all'alba.)
+        if (!this.vivi().some((p) => p.ruolo === ruolo)) continue;
         const esito = await this.turnoNotturno(run, ruolo);
         if (ruolo === 'lupo') this.vittimaNotte = esito;
         if (ruolo === 'strega') pozione = esito;
@@ -679,8 +683,8 @@ class Partita {
     }
   }
 
-  // Un turno notturno dura sempre un tempo simile, anche se il ruolo è morto:
-  // così il villaggio non capisce chi è ancora in gioco.
+  // Un turno notturno dura sempre almeno un tempo minimo (con una parte casuale),
+  // anche se chi agisce sceglie subito: così dalla durata non si capisce niente.
   async turnoNotturno(run, ruolo) {
     this.azioni = new Map();
     await this.narra(run, N.sveglia(ruolo), SUONI_SVEGLIA[ruolo]);
