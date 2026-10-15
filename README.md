@@ -66,9 +66,10 @@ e l'atmosfera cambia con il passo (sottofondo e colori della notte, dell'alba…
 1. Ognuno entra con il proprio nome; dal tavolo si avvia la partita (minimo 4 giocatori).
 2. Ruoli in base al numero di giocatori: 1 lupo fino a 6, 2 fino a 10, poi 3; sempre una veggente; la guardia da 6 in su.
    Poi i ruoli aggiuntivi scelti nella lobby (vedi sotto), e il resto contadini.
-3. **Notte**: il narratore chiama Cupido (solo la prima notte), lupi, strega, veggente e guardia.
+3. **Notte**: il narratore chiama Cupido (solo la prima notte), lupi, strega, veggente e guardia,
+   saltando i ruoli già morti (il loro ruolo è stato rivelato alla morte, quindi non si svela nulla).
    *Tutti* ricevono qualcosa da toccare a ogni turno (chi non agisce riceve una domanda finta), e ogni turno
-   dura un tempo simile anche se quel ruolo è morto: così nessuno si tradisce.
+   dura almeno un tempo minimo anche se si sceglie subito: così nessuno si tradisce.
 4. **Alba**: il narratore annuncia i morti della notte e ne rivela il ruolo, senza dire chi li ha uccisi.
 5. **Giorno**: discussione a tempo (dal tavolo si può passare subito al voto), poi voto sul telefono.
    In caso di parità nessuno viene eliminato.
