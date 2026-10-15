@@ -151,7 +151,7 @@
     zittisci();
     const mio = letturaTutorial;
     const annullato = () => mio !== letturaTutorial;
-    passoLetto = t.id;
+    passoLetto = `${t.id}\n${t.testo}`;
     try {
       if (audioAttivo) {
         const durata = await Suoni.effetto(t.suono);
@@ -233,7 +233,7 @@
     $('tutorial-avvia').hidden = !ultimo;
     $('tutorial-avvia').disabled = s.giocatori.length < s.minGiocatori;
     $('tutorial-indirizzo').textContent = $('indirizzo').textContent;
-    if (t.id !== passoLetto) leggiPasso(t);
+    if (`${t.id}\n${t.testo}` !== passoLetto) leggiPasso(t); // anche se cambia la variante del testo
   }
 
   // ------------------------------------------------------------- comandi
@@ -294,6 +294,11 @@
     const extra = [...$('ruoli-extra').querySelectorAll('input:checked')].map((i) => i.value);
     socket.emit('tavolo:impostazioni', { extra });
   });
+  $('rivela-ruoli').addEventListener('change', (e) => {
+    socket.emit('tavolo:impostazioni', { rivelaRuoli: e.target.checked });
+  });
+  $('aggiungi-bot').addEventListener('click', () => socket.emit('tavolo:aggiungiBot', Number($('quanti-bot').value)));
+  $('togli-bot').addEventListener('click', () => socket.emit('tavolo:togliBot'));
 
   function ruoliInGioco(conteggio, catalogo) {
     return Object.keys(catalogo)
@@ -341,7 +346,7 @@
     $('lista-lobby').innerHTML =
       s.giocatori
         .map(
-          (g) => `<li class="${g.connesso ? '' : 'offline'}"><span>${esc(g.nome)}</span>
+          (g) => `<li class="${g.connesso ? '' : 'offline'}"><span>${g.bot ? '🤖 ' : ''}${esc(g.nome)}</span>
             <button class="secondario" data-espelli="${esc(g.id)}" data-nome="${esc(g.nome)}" title="Togli">✕</button></li>`,
         )
         .join('') || '<li class="nota">Ancora nessuno… inquadrate il QR!</li>';
@@ -355,6 +360,15 @@
           <input type="checkbox" value="${r}" ${on}> ${info.emoji} ${esc(info.nome)}</label>`;
       })
       .join('');
+    const rivela = s.impostazioni.rivelaRuoli;
+    $('rivela-ruoli').checked = rivela;
+    $('spiega-rivela').textContent = rivela
+      ? 'Alla morte il narratore annuncia il ruolo; di notte i ruoli già morti non vengono più chiamati.'
+      : 'I ruoli dei morti restano segreti fino a fine partita; di notte il narratore chiama anche i ruoli morti, per non svelare niente.';
+    const bot = s.giocatori.filter((g) => g.bot).length;
+    $('togli-bot').hidden = bot === 0;
+    $('togli-bot').textContent = `Togli i bot (${bot})`;
+    $('aggiungi-bot').disabled = n >= 18;
     $('avvia').disabled = n < s.minGiocatori;
   }
 
@@ -378,8 +392,10 @@
       .map((g) => {
         const r = g.ruolo ? s.catalogo[g.ruolo] : null;
         const cls = ['pedina', g.vivo ? '' : 'eliminata', g.connesso ? '' : 'offline'].join(' ');
-        return `<div class="${cls}"><span class="nome">${esc(g.nome)}${g.innamorato ? ' 💘' : ''}</span>
-          <span class="ruolo">${r ? `${r.emoji} ${esc(r.nome)}` : g.vivo ? 'vivo' : ''}</span></div>`;
+        // Con i ruoli segreti un morto mostra solo "fuori dal gioco" fino alla fine.
+        const stato = r ? `${r.emoji} ${esc(r.nome)}` : g.vivo ? 'vivo' : '✝ fuori dal gioco';
+        return `<div class="${cls}"><span class="nome">${g.bot ? '🤖 ' : ''}${esc(g.nome)}${g.innamorato ? ' 💘' : ''}</span>
+          <span class="ruolo">${stato}</span></div>`;
       })
       .join('');
 

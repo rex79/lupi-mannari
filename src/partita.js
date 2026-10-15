@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { RUOLI, RUOLI_EXTRA, EXTRA_PREDEFINITI, ORDINE_NOTTE, composizione, conta } = require('./ruoli');
 const N = require('./narratore');
 const T = require('./tutorial');
+const Bot = require('./bot');
 
 // Tempi base in millisecondi (moltiplicati per "scalaTempi", utile nei test).
 const TEMPI_BASE = {
@@ -76,7 +77,7 @@ class Partita {
     for (const [k, v] of Object.entries(TEMPI_BASE)) this.t[k] = v * this.scala;
     this.giocatori = new Map(); // id -> giocatore
     this.perToken = new Map(); // token segreto -> giocatore
-    this.impostazioni = { discussioneSec: 180, extra: [...EXTRA_PREDEFINITI] };
+    this.impostazioni = { discussioneSec: 180, extra: [...EXTRA_PREDEFINITI], rivelaRuoli: true };
     this.runId = 0;
     this.narrId = 0;
     this.attesaNarrazione = null;
@@ -134,6 +135,8 @@ class Partita {
       rispondi(cb, errore ? { errore } : { ok: true });
     });
     tavolo('tavolo:espelli', (id) => this.rimuovi(id, 'espulso'));
+    tavolo('tavolo:aggiungiBot', (quanti) => this.aggiungiBot(quanti));
+    tavolo('tavolo:togliBot', () => this.togliBot());
     tavolo('tavolo:impostazioni', (imp) => {
       if (this.fase !== 'lobby') return;
       const s = Number(imp?.discussioneSec);
@@ -144,12 +147,13 @@ class Partita {
         this.impostazioni.extra = RUOLI_EXTRA.filter((r) => imp.extra.includes(r));
         this.allineaTutorial();
       }
+      if (typeof imp?.rivelaRuoli === 'boolean') this.impostazioni.rivelaRuoli = imp.rivelaRuoli;
       this.trasmetti();
     });
     tavolo('tavolo:tutorial', (comando) => this.comandoTutorial(comando || {}));
     // Il file audio di un passo del tutorial (null senza voce teatrale o se tarda troppo).
     tavolo('tavolo:audioTutorial', async (id, cb) => {
-      const p = T.passo(id);
+      const p = T.passo(id, this.impostazioni.rivelaRuoli);
       const audio = p && this.voce ? await this.voce.preparaEntro(p.testo, 8000) : null;
       rispondi(cb, { audio });
     });
@@ -404,7 +408,9 @@ class Partita {
         nome: p.nome,
         vivo: p.vivo,
         connesso: p.connesso,
-        ruolo: !p.vivo || fine ? p.ruolo : null,
+        // Il ruolo di un morto è pubblico solo se la lobby ha scelto di rivelarlo.
+        ruolo: (!p.vivo && this.impostazioni.rivelaRuoli) || fine ? p.ruolo : null,
+        bot: Boolean(p.bot),
         innamorato: fine && Boolean(this.coppia?.includes(p.id)),
       })),
       vivi: vivi.length,
@@ -445,6 +451,62 @@ class Partita {
     for (const p of this.giocatori.values()) {
       if (p.connesso && p.socketId) this.io.to(p.socketId).emit('stato', { ...pubblico, io: this.statoPrivato(p) });
     }
+    this.muoviBot();
+  }
+
+  // ------------------------------------------------------------------- bot
+
+  aggiungiBot(quanti) {
+    if (this.fase !== 'lobby') return;
+    const n = Math.max(0, Math.min(Number(quanti) || 0, MAX_GIOCATORI - this.giocatori.size));
+    for (let i = 0; i < n; i++) {
+      const nome = Bot.nomeLibero([...this.giocatori.values()].map((g) => g.nome));
+      const p = {
+        id: crypto.randomBytes(4).toString('hex'),
+        token: crypto.randomUUID(),
+        nome,
+        bot: true,
+        ruolo: null,
+        vivo: true,
+        pronto: false,
+        indagini: [],
+        connesso: true,
+        socketId: null,
+      };
+      this.giocatori.set(p.id, p);
+      this.perToken.set(p.token, p);
+    }
+    this.trasmetti();
+  }
+
+  togliBot() {
+    if (this.fase !== 'lobby') return;
+    for (const p of [...this.giocatori.values()]) {
+      if (p.bot) {
+        this.giocatori.delete(p.id);
+        this.perToken.delete(p.token);
+      }
+    }
+    this.trasmetti();
+  }
+
+  // Ogni volta che lo stato cambia, i bot con una nuova azione da fare la programmano
+  // con un piccolo ritardo, come farebbe una persona. Una sola mossa per azione.
+  muoviBot() {
+    for (const p of this.giocatori.values()) {
+      if (!p.bot) continue;
+      const a = this.azionePer(p);
+      if (!a) continue;
+      const chiave = [this.runId, this.fase, this.sottofase, this.notte, a.tipo, this.cacciatoreId].join('|');
+      if (p.mossa === chiave) continue;
+      p.mossa = chiave;
+      setTimeout(() => {
+        const ora = this.azionePer(p);
+        const ancora = [this.runId, this.fase, this.sottofase, this.notte, ora?.tipo, this.cacciatoreId].join('|');
+        if (!ora || ancora !== chiave || !this.giocatori.has(p.id)) return;
+        this.azione(p.id, Bot.scelta(ora));
+      }, Math.max(20, Bot.ritardo(a) * this.scala));
+    }
   }
 
   annota(testo) {
@@ -458,7 +520,7 @@ class Partita {
   // "avanti" con "da" avanza solo se si è ancora su quel passo (evita salti doppi).
   comandoTutorial({ azione, da, indice }) {
     if (this.fase !== 'lobby') return;
-    const passi = T.passiAttivi(this.impostazioni.extra);
+    const passi = T.passiAttivi(this.impostazioni.extra, this.impostazioni.rivelaRuoli);
     const i = this.tutorial ? passi.findIndex((p) => p.id === this.tutorial.id) : -1;
     if (azione === 'apri') this.tutorial = { id: passi[0].id };
     else if (azione === 'chiudi') this.tutorial = null;
@@ -472,7 +534,7 @@ class Partita {
   // Se si disattiva il ruolo del passo mostrato, si passa al passo attivo successivo.
   allineaTutorial() {
     if (!this.tutorial) return;
-    const attivi = new Set(T.passiAttivi(this.impostazioni.extra).map((p) => p.id));
+    const attivi = new Set(T.passiAttivi(this.impostazioni.extra, this.impostazioni.rivelaRuoli).map((p) => p.id));
     if (attivi.has(this.tutorial.id)) return;
     const dopo = T.PASSI.slice(T.PASSI.findIndex((p) => p.id === this.tutorial.id)).find((p) => attivi.has(p.id));
     this.tutorial.id = dopo?.id ?? T.PASSI[0].id;
@@ -480,7 +542,7 @@ class Partita {
 
   tutorialPubblico() {
     if (!this.tutorial || this.fase !== 'lobby') return null;
-    const passi = T.passiAttivi(this.impostazioni.extra);
+    const passi = T.passiAttivi(this.impostazioni.extra, this.impostazioni.rivelaRuoli);
     const indice = Math.max(0, passi.findIndex((p) => p.id === this.tutorial.id));
     const p = passi[indice];
     return {
@@ -620,7 +682,8 @@ class Partita {
         // Un ruolo senza giocatori vivi non viene più chiamato: il suo ruolo è già stato
         // rivelato alla morte, quindi saltarlo non svela niente a nessuno.
         // (Chi muore stanotte agisce comunque: le morti si applicano all'alba.)
-        if (!this.vivi().some((p) => p.ruolo === ruolo)) continue;
+        // Con i ruoli segreti invece si chiamano tutti, altrimenti si svelerebbe chi è morto.
+        if (this.impostazioni.rivelaRuoli && !this.vivi().some((p) => p.ruolo === ruolo)) continue;
         const esito = await this.turnoNotturno(run, ruolo);
         if (ruolo === 'lupo') this.vittimaNotte = esito;
         if (ruolo === 'strega') pozione = esito;
@@ -728,19 +791,23 @@ class Partita {
       const p = this.giocatori.get(m.id);
       if (!p || !p.vivo) continue;
       p.vivo = false;
+      // Con i ruoli segreti né il narratore né la cronaca dicono il ruolo del morto.
+      const rivela = this.impostazioni.rivelaRuoli;
       const r = RUOLI[p.ruolo];
+      const tag = rivela ? ` (${r.nome})` : '';
+      const ruolo = rivela ? r.conArticolo : null;
       if (m.causa === 'notte') {
-        this.annota(`Notte ${this.notte}: è morto ${p.nome} (${r.nome}).`);
-        await this.narra(run, N.mortoNotte(p.nome, r.conArticolo), 'campana');
+        this.annota(`Notte ${this.notte}: è morto ${p.nome}${tag}.`);
+        await this.narra(run, N.mortoNotte(p.nome, ruolo), 'campana');
       } else if (m.causa === 'voto') {
-        this.annota(`Giorno ${this.notte}: il villaggio ha eliminato ${p.nome} (${r.nome}) con ${m.voti} vot${m.voti === 1 ? 'o' : 'i'}.`);
-        await this.narra(run, N.eliminato(p.nome, r.conArticolo, m.voti), 'campana');
+        this.annota(`Giorno ${this.notte}: il villaggio ha eliminato ${p.nome}${tag} con ${m.voti} vot${m.voti === 1 ? 'o' : 'i'}.`);
+        await this.narra(run, N.eliminato(p.nome, ruolo, m.voti), 'campana');
       } else if (m.causa === 'amore') {
-        this.annota(`${p.nome} (${r.nome}) muore di dolore per ${m.amato}.`);
-        await this.narra(run, N.amore(p.nome, m.amato, r.conArticolo), 'campana');
+        this.annota(`${p.nome}${tag} muore di dolore per ${m.amato}.`);
+        await this.narra(run, N.amore(p.nome, m.amato, ruolo), 'campana');
       } else if (m.causa === 'sparo') {
-        this.annota(`Il cacciatore colpisce ${p.nome} (${r.nome}).`);
-        await this.narra(run, N.sparo(p.nome, r.conArticolo), 'sparo');
+        this.annota(`Il cacciatore colpisce ${p.nome}${tag}.`);
+        await this.narra(run, N.sparo(p.nome, ruolo), 'sparo');
       }
 
       // Le reazioni a catena passano davanti alle altre morti: lo sparo del cacciatore

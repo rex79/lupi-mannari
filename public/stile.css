@@ -340,6 +340,10 @@ body.tavolo { font-size: 18px; }
   margin: 20px 0 0;
 }
 .extra legend { color: var(--tenue); padding: 0 6px; }
+.extra .nota { margin: 8px 0 0; }
+.bot-controlli { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
+.bot-controlli label { display: flex; align-items: center; gap: 8px; }
+.bot-controlli .nota { flex-basis: 100%; margin: 0; }
 #ruoli-extra { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .scelta-extra { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .scelta-extra input { width: 18px; height: 18px; accent-color: var(--accento); }

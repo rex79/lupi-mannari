@@ -106,30 +106,48 @@ module.exports = {
   dorme: (ruolo) => scegli(FISSE.dorme[ruolo]),
   alba: () => scegli(FISSE.alba),
 
+  // Annunci di morte: "ruolo" è null quando i ruoli restano segreti (opzione della lobby),
+  // e allora il narratore non lo dice.
   // Le morti notturne non dicono chi ha colpito: lupi o strega, resta un mistero.
   mortoNotte: (nome, ruolo) =>
-    scegli([
-      `Questa notte qualcuno non si è svegliato. Il villaggio piange ${nome}, che era ${ruolo}.`,
-      `Tra i campi restano solo tracce di una lotta: ${nome} non c’è più. Era ${ruolo}.`,
-      `La porta di casa di ${nome} è spalancata, e dentro regna il silenzio. ${nome} era ${ruolo}.`,
-    ]),
+    ruolo
+      ? scegli([
+          `Questa notte qualcuno non si è svegliato. Il villaggio piange ${nome}, che era ${ruolo}.`,
+          `Tra i campi restano solo tracce di una lotta: ${nome} non c’è più. Era ${ruolo}.`,
+          `La porta di casa di ${nome} è spalancata, e dentro regna il silenzio. ${nome} era ${ruolo}.`,
+        ])
+      : scegli([
+          `Questa notte qualcuno non si è svegliato. Il villaggio piange ${nome}, e il suo segreto se ne va con lui.`,
+          `Tra i campi restano solo tracce di una lotta: ${nome} non c’è più. Chi fosse davvero, nessuno lo saprà.`,
+          `La porta di casa di ${nome} è spalancata, e dentro regna il silenzio.`,
+        ]),
 
   nessunMorto: () => scegli(FISSE.nessunMorto),
 
   amore: (nome, amato, ruolo) =>
-    scegli([
-      `Il cuore di ${nome} si spezza: senza ${amato} non può vivere. ${nome} era ${ruolo}.`,
-      `${nome} non regge al dolore per la perdita di ${amato}, e lascia il villaggio per sempre. Era ${ruolo}.`,
-    ]),
+    ruolo
+      ? scegli([
+          `Il cuore di ${nome} si spezza: senza ${amato} non può vivere. ${nome} era ${ruolo}.`,
+          `${nome} non regge al dolore per la perdita di ${amato}, e lascia il villaggio per sempre. Era ${ruolo}.`,
+        ])
+      : scegli([
+          `Il cuore di ${nome} si spezza: senza ${amato} non può vivere.`,
+          `${nome} non regge al dolore per la perdita di ${amato}, e lascia il villaggio per sempre.`,
+        ]),
 
   cacciatore: (nome) =>
     `Prima di morire, ${nome} imbraccia il fucile per un ultimo colpo. Cacciatore, scegli sul telefono chi portare con te.`,
 
   sparo: (nome, ruolo) =>
-    scegli([
-      `Un colpo risuona nel villaggio: ${nome} cade a terra. Era ${ruolo}.`,
-      `Il cacciatore non sbaglia: ${nome} è colpito. Era ${ruolo}.`,
-    ]),
+    ruolo
+      ? scegli([
+          `Un colpo risuona nel villaggio: ${nome} cade a terra. Era ${ruolo}.`,
+          `Il cacciatore non sbaglia: ${nome} è colpito. Era ${ruolo}.`,
+        ])
+      : scegli([
+          `Un colpo risuona nel villaggio: ${nome} cade a terra.`,
+          `Il cacciatore non sbaglia: ${nome} è colpito.`,
+        ]),
 
   sparoMancato: () => scegli(FISSE.sparoMancato),
 
@@ -139,10 +157,15 @@ module.exports = {
   voto: () => scegli(FISSE.voto),
 
   eliminato: (nome, ruolo, voti) =>
-    scegli([
-      `Il villaggio ha emesso il suo verdetto: con ${voti} voti, tocca a ${nome} salire sul rogo. ${nome} era ${ruolo}.`,
-      `La folla indica ${nome}. Con ${voti} voti, il villaggio ha deciso. ${nome} era ${ruolo}.`,
-    ]),
+    ruolo
+      ? scegli([
+          `Il villaggio ha emesso il suo verdetto: con ${voti} voti, tocca a ${nome} salire sul rogo. ${nome} era ${ruolo}.`,
+          `La folla indica ${nome}. Con ${voti} voti, il villaggio ha deciso. ${nome} era ${ruolo}.`,
+        ])
+      : scegli([
+          `Il villaggio ha emesso il suo verdetto: con ${voti} voti, tocca a ${nome} salire sul rogo. Le fiamme si portano via anche il suo segreto.`,
+          `La folla indica ${nome}. Con ${voti} voti, il villaggio ha deciso. Avrete eliminato un lupo? Lo scoprirete solo alla fine.`,
+        ]),
 
   pareggio: () => scegli(FISSE.pareggio),
   nessunVoto: () => scegli(FISSE.nessunVoto),

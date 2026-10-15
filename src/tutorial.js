@@ -129,6 +129,10 @@ const PASSI = [
     testo:
       'All’alba tutti alzano la testa. Annuncerò chi è morto durante la notte e quale era il suo ruolo, ma non come è morto. ' +
       'Chi viene eliminato è fuori dal gioco: da quel momento non può più parlare né fare facce, fino alla fine della partita.',
+    segreto:
+      'All’alba tutti alzano la testa. Annuncerò chi è morto durante la notte, ma non come è morto né quale era il suo ruolo: ' +
+      'in questa partita i ruoli dei morti restano segreti fino alla fine. ' +
+      'Chi viene eliminato è fuori dal gioco: da quel momento non può più parlare né fare facce, fino alla fine della partita.',
   },
   {
     id: 'giorno',
@@ -151,6 +155,10 @@ const PASSI = [
       'Allo scadere del tempo si vota. Ognuno sceglie sul telefono chi eliminare, e finché la votazione è aperta può cambiare idea. ' +
       'Il più votato sale sul rogo e il suo ruolo viene rivelato. In caso di parità, quel giorno nessuno viene eliminato. ' +
       'Provate: sul telefono c’è una votazione di prova.',
+    segreto:
+      'Allo scadere del tempo si vota. Ognuno sceglie sul telefono chi eliminare, e finché la votazione è aperta può cambiare idea. ' +
+      'Il più votato sale sul rogo, ma il suo ruolo resta un segreto: avrete eliminato un lupo o un innocente? ' +
+      'In caso di parità, quel giorno nessuno viene eliminato. Provate: sul telefono c’è una votazione di prova.',
   },
   {
     id: 'vittoria',
@@ -177,18 +185,23 @@ for (const p of PASSI) {
   if (RUOLI[p.id]) p.emoji = p.emoji || RUOLI[p.id].emoji;
 }
 
-// I passi da mostrare con i ruoli aggiuntivi scelti nella lobby.
-function passiAttivi(extra = []) {
-  return PASSI.filter((p) => !p.extra || extra.includes(p.id));
+// I passi da mostrare con i ruoli aggiuntivi scelti nella lobby. Con i ruoli segreti
+// ("rivela" falso) i passi che hanno una variante "segreto" usano quel testo.
+function passiAttivi(extra = [], rivela = true) {
+  return PASSI.filter((p) => !p.extra || extra.includes(p.id)).map((p) =>
+    !rivela && p.segreto ? { ...p, testo: p.segreto } : p,
+  );
 }
 
-function passo(id) {
-  return PASSI.find((p) => p.id === id) ?? null;
+function passo(id, rivela = true) {
+  const p = PASSI.find((x) => x.id === id);
+  if (!p) return null;
+  return !rivela && p.segreto ? { ...p, testo: p.segreto } : p;
 }
 
-// Tutti i testi, per prepararli in anticipo con la voce teatrale.
+// Tutti i testi (anche le varianti), per prepararli in anticipo con la voce teatrale.
 function testi() {
-  return PASSI.map((p) => p.testo);
+  return PASSI.flatMap((p) => (p.segreto ? [p.testo, p.segreto] : [p.testo]));
 }
 
 module.exports = { PASSI, passiAttivi, passo, testi };
