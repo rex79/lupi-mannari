@@ -71,6 +71,9 @@ e l'atmosfera cambia con il passo (sottofondo e colori della notte, dell'alba…
    *Tutti* ricevono qualcosa da toccare a ogni turno (chi non agisce riceve una domanda finta), e ogni turno
    dura almeno un tempo minimo anche se si sceglie subito: così nessuno si tradisce.
 4. **Alba**: il narratore annuncia i morti della notte e ne rivela il ruolo, senza dire chi li ha uccisi.
+   Con l'opzione **Rivela il ruolo alla morte** spenta (sezione "Regole" della lobby) i ruoli dei morti restano
+   segreti fino a fine partita: il narratore non li dice, tavolo, telefoni e cronaca non li mostrano, e di notte
+   vengono chiamati anche i ruoli già morti, così nessuno capisce chi è uscito.
 5. **Giorno**: discussione a tempo (dal tavolo si può passare subito al voto), poi voto sul telefono.
    In caso di parità nessuno viene eliminato.
 6. **Pausa**: in qualsiasi momento il tavolo può mettere in pausa con il pulsante ⏸ o la barra spaziatrice.
@@ -93,10 +96,16 @@ Le morti a catena (innamorato, colpo del cacciatore) vengono risolte e annunciat
 
 Se un telefono si blocca o si ricarica la pagina, il giocatore rientra al suo posto con lo stesso ruolo.
 
-## Provare da soli
+## Bot e prove da soli
+
+Nella lobby del tavolo **🤖 Aggiungi bot** inserisce N giocatori finti gestiti dal server (con un piccolo ritardo,
+come persone vere): utili se siete in pochi, o per provare il gioco da soli. Giocano tutti i ruoli scegliendo a caso
+(i lupi si accordano tra loro, la strega è prudente). **Togli i bot** li rimuove tutti; si possono anche togliere uno alla volta con ✕.
+
+Da terminale, per lo sviluppo:
 
 ```bash
-npm run bot -- 5      # in un secondo terminale: aggiunge 5 giocatori finti
+npm run bot -- 5      # in un secondo terminale: 5 bot che si collegano come telefoni
 npm run simula        # partite complete accelerate, solo bot, per controllare la logica
 ```
 
@@ -111,6 +120,7 @@ src/ruoli.js         ruoli e composizione per numero di giocatori
 src/narratore.js     il copione del narratore (aggiungi qui nuove frasi)
 src/voce.js          voce teatrale: sintesi vocale OpenAI con cache su disco
 src/tutorial.js      testi del tutorial vocale "Come si gioca"
+src/bot.js           scelte e tempi dei bot aggiunti dal tavolo
 public/index.html    pagina telefono  (giocatore.js)
 public/tavolo.html   pagina tavolo  (tavolo.js, audio.js per voce, sottofondi ed effetti)
 public/audio/        suoni (elenco in suoni.json, istruzioni in LEGGIMI.md)

@@ -37,9 +37,27 @@
       </div>
       <h2>Al tavolo <span id="conteggio" class="nota"></span></h2>
       <ul id="lista-lobby" class="lista-lobby"></ul>
+      <div class="bot-controlli">
+        <label>🤖 Bot
+          <select id="quanti-bot" aria-label="Quanti bot aggiungere">
+            <option>1</option><option>2</option><option selected>3</option><option>4</option>
+            <option>5</option><option>6</option><option>8</option><option>10</option>
+          </select>
+        </label>
+        <button id="aggiungi-bot">Aggiungi bot</button>
+        <button id="togli-bot" class="secondario">Togli i bot</button>
+        <span class="nota">Giocatori finti che scelgono a caso: utili se siete in pochi o per provare.</span>
+      </div>
       <fieldset class="extra">
         <legend>Ruoli aggiuntivi</legend>
         <div id="ruoli-extra"></div>
+      </fieldset>
+      <fieldset class="extra">
+        <legend>Regole</legend>
+        <label class="scelta-extra" title="Se spento, alla morte il ruolo resta segreto fino a fine partita e di notte il narratore chiama anche i ruoli dei morti.">
+          <input type="checkbox" id="rivela-ruoli"> 🪦 Rivela il ruolo alla morte
+        </label>
+        <p id="spiega-rivela" class="nota"></p>
       </fieldset>
       <p id="composizione" class="nota"></p>
       <div class="impostazioni">

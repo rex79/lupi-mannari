@@ -198,7 +198,7 @@
       .map((g) => {
         const cls = [g.vivo ? '' : 'morto', g.connesso ? '' : 'offline'].join(' ');
         const ruolo = g.ruolo ? ` ${s.catalogo[g.ruolo].emoji}` : '';
-        return `<li class="${cls}">${esc(g.nome)}${ruolo}</li>`;
+        return `<li class="${cls}">${g.bot ? "🤖 " : ""}${esc(g.nome)}${ruolo}</li>`;
       })
       .join('');
   }
