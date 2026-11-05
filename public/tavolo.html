@@ -32,7 +32,9 @@
         <div>
           <p>Inquadrate il codice, oppure aprite sul telefono:</p>
           <p id="indirizzo" class="indirizzo"></p>
-          <p class="nota">I telefoni devono essere collegati alla stessa rete Wi-Fi di questo computer.</p>
+          <p>Codice della partita: <strong id="codice-stanza" class="codice-grande"></strong></p>
+          <p class="nota">I giocatori aprono il link sul telefono (o inquadrano il QR) e scrivono il proprio nome.
+            Se giocate a distanza, mettetevi anche in chiamata vocale.</p>
         </div>
       </div>
       <h2>Al tavolo <span id="conteggio" class="nota"></span></h2>
@@ -58,6 +60,10 @@
           <input type="checkbox" id="rivela-ruoli"> 🪦 Rivela il ruolo alla morte
         </label>
         <p id="spiega-rivela" class="nota"></p>
+        <label class="scelta-extra" title="Se attivo, una persona legge il copione ad alta voce e fa avanzare la partita; la voce automatica non viene usata.">
+          <input type="checkbox" id="narratore-umano"> 🎭 Narratore in carne e ossa
+        </label>
+        <p id="spiega-narratore" class="nota"></p>
       </fieldset>
       <p id="composizione" class="nota"></p>
       <div class="impostazioni">
@@ -103,6 +109,8 @@
       <div class="intestazione-fase"><h2 id="titolo-fase"></h2><div id="timer" class="timer"></div></div>
       <p id="banner-pausa" class="banner-pausa" hidden>⏸ Partita in pausa: il tempo è fermo. Premi Riprendi (o la barra spaziatrice) per continuare.</p>
       <p id="narrazione" class="narrazione-grande"></p>
+      <button id="frase-letta" class="grande" hidden>✓ Frase letta, vai avanti</button>
+      <p id="suggerimento-narratore" class="nota" hidden>Leggi la frase ad alta voce, poi premi il pulsante (o il tasto Invio).</p>
       <p id="progresso" class="nota"></p>
       <div id="griglia" class="griglia"></div>
       <div id="voti" class="voti"></div>
@@ -110,6 +118,7 @@
         <button id="pausa">⏸ Pausa</button>
         <button id="allunga">+1 minuto</button>
         <button id="al-voto">Passa al voto ⏭</button>
+        <button id="avanti-turno" hidden>⏭ Avanti</button>
         <button id="nuova" class="secondario">Nuova partita</button>
       </div>
       <details class="storia"><summary>Cronaca della partita</summary><ol id="storia"></ol></details>

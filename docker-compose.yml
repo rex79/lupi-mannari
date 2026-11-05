@@ -1,0 +1,33 @@
+# Lupi mannari su un VPS: l'app Node dietro Caddy, che mette HTTPS automatico.
+# Serve un file .env con almeno DOMINIO e URL_PUBBLICO (vedi .env.esempio).
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3000
+    volumes:
+      # La cache della voce teatrale sopravvive ai riavvii (si paga una volta sola).
+      - cache-voce:/app/cache-voce
+    # Non espone porte: ci passa solo Caddy.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO:?Imposta DOMINIO nel file .env, es. lupi.example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-dati:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  cache-voce:
+  caddy-dati:
+  caddy-config:

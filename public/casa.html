@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14151c">
+  <title>Lupi mannari</title>
+  <link rel="stylesheet" href="/stile.css">
+</head>
+<body class="casa" data-fase="lobby">
+  <main class="casa-main">
+    <h1 class="logo">🐺 Lupi mannari</h1>
+    <p class="casa-intro">
+      Il gioco dei lupi mannari con il telefono come carta segreta. Si gioca nella stessa
+      stanza oppure a distanza: basta che ognuno apra il link sul proprio telefono.
+    </p>
+
+    <section class="casa-scheda">
+      <h2>Crea una partita</h2>
+      <div class="scelte-narratore" role="radiogroup" aria-label="Chi narra la partita">
+        <label>
+          <input type="radio" name="narratore" value="umano" checked>
+          <span class="biglietto">
+            <strong>🎭 Narratore in carne e ossa</strong>
+            <span class="nota">Una persona legge il copione ad alta voce e fa avanzare la partita.
+              Perfetto a distanza: mettetevi in chiamata vocale e giocate.</span>
+          </span>
+        </label>
+        <label>
+          <input type="radio" name="narratore" value="auto">
+          <span class="biglietto">
+            <strong>🔊 Narratore automatico</strong>
+            <span class="nota">Il computer racconta la partita con la voce (teatrale o del browser).
+              Perfetto nella stessa stanza, attorno a uno schermo.</span>
+          </span>
+        </label>
+      </div>
+      <button id="crea" class="grande">Crea la partita</button>
+      <p class="nota">Chi crea riceve il <strong>link del narratore</strong> (da tenere per sé: da lì si comanda la partita)
+        e un codice da condividere con i giocatori.</p>
+    </section>
+
+    <section class="casa-scheda">
+      <h2>Unisciti a una partita</h2>
+      <form id="form-unisciti">
+        <label for="codice">Codice della partita (te lo dà chi l’ha creata)</label>
+        <input id="codice" class="input-codice" maxlength="4" autocomplete="off" autocapitalize="characters"
+               spellcheck="false" placeholder="ABCD" required>
+        <button type="submit" class="grande">Entra</button>
+      </form>
+    </section>
+
+    <p id="errore" class="errore" role="status"></p>
+    <footer class="casa-piede"><a href="https://github.com/rex79/lupi-mannari">codice sorgente</a></footer>
+  </main>
+  <script src="/casa.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# HTTPS automatico (Let's Encrypt) per il dominio impostato in .env.
+{$DOMINIO} {
+	reverse_proxy app:3000
+}

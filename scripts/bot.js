@@ -2,23 +2,29 @@
 'use strict';
 
 // Giocatori finti per provare il gioco da soli.
-//   npm run bot -- 4                 → aggiunge 4 bot al server locale
-//   URL=http://192.168.1.20:3000 npm run bot -- 3
+//   CODICE=ABCD npm run bot -- 4                        → 4 bot nella stanza ABCD del server locale
+//   URL=http://192.168.1.20:3000 CODICE=ABCD npm run bot -- 3
 
 const { io } = require('socket.io-client');
 
 const NOMI = ['Aldo', 'Bea', 'Carlo', 'Dora', 'Elio', 'Fede', 'Gino', 'Ines', 'Lia', 'Mino', 'Nora', 'Otto', 'Pia', 'Rino'];
 
-function avviaBot(nome, { url = 'http://localhost:3000', lentezza = 1, log = () => {} } = {}) {
+function avviaBot(nome, { url = 'http://localhost:3000', codice, lentezza = 1, log = () => {} } = {}) {
   const socket = io(url, { forceNew: true });
   let token = null;
   let ultimoStato = null;
   let ultimaChiave = null;
 
   socket.on('connect', () => {
-    socket.emit('giocatore:entra', { token, nome }, (r = {}) => {
-      if (r.ok) token = r.token;
-      else if (r.errore) log(`${nome}: ${r.errore}`);
+    const entra = () =>
+      socket.emit('giocatore:entra', { token, nome }, (r = {}) => {
+        if (r.ok) token = r.token;
+        else if (r.errore) log(`${nome}: ${r.errore}`);
+      });
+    if (!codice) return entra();
+    socket.emit('stanza:entra', { codice }, (r = {}) => {
+      if (r.errore) return log(`${nome} (${codice}): ${r.errore}`);
+      entra();
     });
   });
 
@@ -52,8 +58,13 @@ function avviaBot(nome, { url = 'http://localhost:3000', lentezza = 1, log = () 
 if (require.main === module) {
   const quanti = Number(process.argv[2]) || 4;
   const url = process.env.URL || 'http://localhost:3000';
-  for (let i = 0; i < quanti; i++) avviaBot(`Bot ${NOMI[i % NOMI.length]}`, { url, log: console.log });
-  console.log(`${quanti} bot collegati a ${url}. Ctrl+C per toglierli.`);
+  const codice = (process.env.CODICE || '').toUpperCase();
+  if (!codice) {
+    console.error('Serve il codice della stanza: CODICE=ABCD npm run bot -- 4');
+    process.exit(1);
+  }
+  for (let i = 0; i < quanti; i++) avviaBot(`Bot ${NOMI[i % NOMI.length]}`, { url, codice, log: console.log });
+  console.log(`${quanti} bot collegati a ${url}, stanza ${codice}. Ctrl+C per toglierli.`);
 }
 
 module.exports = { avviaBot, NOMI };

@@ -77,7 +77,12 @@ class Partita {
     for (const [k, v] of Object.entries(TEMPI_BASE)) this.t[k] = v * this.scala;
     this.giocatori = new Map(); // id -> giocatore
     this.perToken = new Map(); // token segreto -> giocatore
-    this.impostazioni = { discussioneSec: 180, extra: [...EXTRA_PREDEFINITI], rivelaRuoli: true };
+    this.impostazioni = {
+      discussioneSec: 180,
+      extra: [...EXTRA_PREDEFINITI],
+      rivelaRuoli: true,
+      narratoreUmano: Boolean(opzioni.narratoreUmano),
+    };
     this.runId = 0;
     this.narrId = 0;
     this.attesaNarrazione = null;
@@ -102,6 +107,7 @@ class Partita {
     this.pausa = null; // { da } quando il tavolo ha messo in pausa
     this.tutorial = null; // { id } del passo mostrato, solo in lobby
     this.minimo = null;
+    this.forzaAvanti = false; // il narratore umano ha chiesto di chiudere l'attesa
     this.vittimaNotte = null; // scelta dei lupi, mostrata alla strega
     this.pozioni = { vita: true, morte: true };
     this.coppia = null; // [id, id] scelti da Cupido
@@ -117,7 +123,7 @@ class Partita {
   collega(socket, { chiave, urlGiocatori }) {
     socket.on('tavolo:entra', (k, cb) => {
       if (k !== chiave) {
-        return rispondi(cb, { errore: 'Chiave del tavolo non valida: usa il link stampato nel terminale.' });
+        return rispondi(cb, { errore: 'Chiave del tavolo non valida: controlla di avere aperto il link del narratore.' });
       }
       socket.data.tavolo = true;
       socket.join('tavolo');
@@ -148,6 +154,7 @@ class Partita {
         this.allineaTutorial();
       }
       if (typeof imp?.rivelaRuoli === 'boolean') this.impostazioni.rivelaRuoli = imp.rivelaRuoli;
+      if (typeof imp?.narratoreUmano === 'boolean') this.impostazioni.narratoreUmano = imp.narratoreUmano;
       this.trasmetti();
     });
     tavolo('tavolo:tutorial', (comando) => this.comandoTutorial(comando || {}));
@@ -161,6 +168,12 @@ class Partita {
       if (this.fase !== 'giorno') return;
       this.saltaDiscussione = true;
       this.riprendi(); // "passa al voto" vale anche come ripresa
+    });
+    // Con il narratore in carne e ossa: chiude l'attesa corrente, ma mai prima del
+    // tempo minimo (che di notte evita di capire dal cronometro chi ha agito).
+    tavolo('tavolo:avantiTurno', () => {
+      this.forzaAvanti = true;
+      this.riprendi();
     });
     tavolo('tavolo:pausa', () => this.mettiInPausa());
     tavolo('tavolo:riprendi', () => this.riprendi());
@@ -392,6 +405,7 @@ class Partita {
       sottofase: this.sottofase,
       notte: this.notte,
       narrazione: this.narrazione,
+      narrazioneId: this.narrId,
       // In pausa il tempo restante resta fermo a quello del momento della pausa.
       restanteMs: this.scadenza ? Math.max(0, this.scadenza - (this.pausa?.da ?? Date.now())) : null,
       inPausa: Boolean(this.pausa),
@@ -587,15 +601,19 @@ class Partita {
     this.controlla(run);
     const id = ++this.narrId;
     const tavoli = this.io.sockets.adapter.rooms.get('tavolo')?.size ?? 0;
+    const umano = this.impostazioni.narratoreUmano;
     // Con la voce teatrale si aspetta il file audio, ma mai più di qualche secondo:
     // se tarda, il tavolo legge con la voce del browser e il file servirà la prossima volta.
-    const audio = this.voce && tavoli ? await this.voce.preparaEntro(testo, 8000) : null;
+    // Con un narratore in carne e ossa la voce non serve: il copione lo legge una persona.
+    const audio = !umano && this.voce && tavoli ? await this.voce.preparaEntro(testo, 8000) : null;
     this.controlla(run);
     this.narrazione = testo;
     this.trasmetti();
     const stima = 1500 + testo.length * 65;
-    const limite = tavoli ? stima * 2 + 8000 : stima * this.scala;
-    this.io.to('tavolo').emit('narra', { id, testo, audio, suono });
+    // Narratore umano: la partita va avanti quando preme «frase letta» sul tavolo
+    // (rete di sicurezza a 10 minuti, nel caso si sia allontanato).
+    const limite = umano && tavoli ? 600000 : tavoli ? stima * 2 + 8000 : stima * this.scala;
+    this.io.to('tavolo').emit('narra', { id, testo, audio, suono, umano });
     await new Promise((risolvi) => {
       const timer = setTimeout(fatto, limite);
       const self = this;
@@ -615,6 +633,7 @@ class Partita {
   async attendi(run, { min = 0, max, fatto = () => false }) {
     // Se si parte già in pausa, il conto parte dall'inizio della pausa: alla ripresa
     // le scadenze vengono spostate in avanti e il tempo pieno resta intatto.
+    this.forzaAvanti = false;
     const ora = this.pausa?.da ?? Date.now();
     this.scadenza = ora + max;
     this.minimo = ora + min;
@@ -624,7 +643,7 @@ class Partita {
       if (!this.pausa) {
         const adesso = Date.now();
         if (adesso >= this.scadenza) break;
-        if (adesso >= this.minimo && fatto()) break;
+        if (adesso >= this.minimo && (fatto() || this.forzaAvanti)) break;
       }
       await dormi(100);
     }

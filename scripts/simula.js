@@ -2,7 +2,9 @@
 'use strict';
 
 // Partite complete a velocità accelerata, solo bot, per controllare la logica.
-//   npm run simula            → 5 partite con 4..12 giocatori
+// Ogni partita vive in una stanza separata, come sul server pubblico; metà delle
+// partite usa il narratore automatico e metà quello in carne e ossa.
+//   npm run simula            → 6 partite con 4..12 giocatori
 //   npm run simula -- 20      → 20 partite
 
 const { io } = require('socket.io-client');
@@ -19,9 +21,9 @@ const EVENTI = {
 };
 
 async function main() {
-  const partite = Number(process.argv[2]) || 5;
+  const partite = Number(process.argv[2]) || 6;
   // voce: null → la simulazione non chiama mai il servizio di sintesi vocale.
-  const srv = await avviaServer({ porta: 0, chiave: 'test', scalaTempi: SCALA, voce: null });
+  const srv = await avviaServer({ porta: 0, scalaTempi: SCALA, voce: null });
   const url = `http://localhost:${srv.porta}`;
   const esiti = {};
   const eventi = Object.fromEntries(Object.keys(EVENTI).map((k) => [k, 0]));
@@ -30,23 +32,29 @@ async function main() {
 
   for (let k = 0; k < partite; k++) {
     const n = 4 + (k % 9);
+    const umano = k % 2 === 0; // una partita sì e una no con il narratore in carne e ossa
+    const stanza = srv.creaStanza({ narratoreUmano: umano });
     const tavolo = io(url, { forceNew: true });
     const bot = [];
     let stato = null;
-    const fasiViste = new Set();
 
+    // Il "narratore" finto conferma subito ogni frase letta.
     tavolo.on('narra', ({ id }) => setTimeout(() => tavolo.emit('tavolo:narrazioneFinita', id), 5));
     tavolo.on('stato', (s) => {
       stato = s;
-      fasiViste.add(s.fase);
+      // Con il narratore umano si chiede anche di chiudere le attese il prima possibile.
+      if (umano && s.restanteMs != null && !s.inPausa && !['lobby', 'fine'].includes(s.fase)) {
+        tavolo.emit('tavolo:avantiTurno');
+      }
     });
-    await new Promise((r) => tavolo.emit('tavolo:entra', 'test', r));
-    tavolo.emit('tavolo:nuovaPartita');
+    const dentro = await new Promise((r) => tavolo.emit('stanza:entra', { codice: stanza.codice }, r));
+    if (!dentro.ok) throw new Error(dentro.errore);
+    await new Promise((r) => tavolo.emit('tavolo:entra', stanza.chiave, r));
     // Alterna le configurazioni: tutti i ruoli extra, solo quelli predefiniti, nessuno.
     const extra = [['strega', 'cacciatore', 'cupido'], ['strega', 'cacciatore'], []][k % 3];
     tavolo.emit('tavolo:impostazioni', { extra });
 
-    for (let i = 0; i < n; i++) bot.push(avviaBot(`${NOMI[i]}`, { url, lentezza: 0.01 }));
+    for (let i = 0; i < n; i++) bot.push(avviaBot(`${NOMI[i]}`, { url, codice: stanza.codice, lentezza: 0.01 }));
     await attendi(() => stato?.giocatori.length === n, 3000);
 
     const avvio = await new Promise((r) => tavolo.emit('tavolo:avvia', r));
@@ -63,7 +71,8 @@ async function main() {
       const cronaca = stato.storia.join(' ');
       for (const [chiave, testo] of Object.entries(EVENTI)) if (cronaca.includes(testo)) eventi[chiave]++;
       console.log(
-        `${coerente ? '✓' : '✗'} Partita ${k + 1}: ${n} giocatori, extra [${extra.join(', ')}], ` +
+        `${coerente ? '✓' : '✗'} Partita ${k + 1}: stanza ${stanza.codice}, ${n} giocatori, ` +
+          `narratore ${umano ? 'in carne e ossa' : 'automatico'}, extra [${extra.join(', ')}], ` +
           `${stato.notte} notti, vince ${stato.vincitore}.`,
       );
       if (k < 3 || (cronaca.includes('di dolore') && !mostrataAmore)) {
@@ -71,14 +80,11 @@ async function main() {
         console.log('   ' + stato.storia.join('\n   '));
       }
     }
-    if (!srv.partita.pozioni.vita) eventi['pozioni della vita usate'] = (eventi['pozioni della vita usate'] || 0) + 1;
-    if (!srv.partita.pozioni.morte) eventi['pozioni della morte usate'] = (eventi['pozioni della morte usate'] || 0) + 1;
+    if (!stanza.partita.pozioni.vita) eventi['pozioni della vita usate'] = (eventi['pozioni della vita usate'] || 0) + 1;
+    if (!stanza.partita.pozioni.morte) eventi['pozioni della morte usate'] = (eventi['pozioni della morte usate'] || 0) + 1;
     bot.forEach((b) => b.close());
     tavolo.close();
-    // Togli i bot dalla lobby prima della partita successiva.
-    srv.partita.azzera();
-    srv.partita.giocatori.clear();
-    srv.partita.perToken.clear();
+    srv.stanze.delete(stanza.codice);
   }
 
   console.log(`\nVittorie: ${JSON.stringify(esiti)}  ·  problemi: ${errori}`);
