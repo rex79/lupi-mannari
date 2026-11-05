@@ -10,31 +10,58 @@
     scrivi(k, v) { try { localStorage.setItem(k, v); } catch { /* niente */ } },
   };
 
-  const chiave = new URLSearchParams(location.search).get('k');
+  const parametri = new URLSearchParams(location.search);
+  const codice = (parametri.get('c') || '').toUpperCase();
+  const chiave = parametri.get('k');
   const socket = io();
   let stato = null;
+  let voceDescr = null; // descrizione della voce teatrale, se c'è
+  let fraseLettaId = 0; // narrazioneId già confermato dal narratore umano
   let scadenzaLocale = null;
 
   // ------------------------------------------------------------ connessione
 
+  function aggiornaNotaVoce() {
+    // Con il narratore in carne e ossa non serve la voce automatica: restano musica ed effetti.
+    $('stato-voce').textContent = stato?.impostazioni?.narratoreUmano
+      ? 'Narratore in carne e ossa: la voce automatica non viene usata. Musica ed effetti restano disponibili.'
+      : voceDescr
+        ? `Narratore: voce teatrale ${voceDescr}. Se una frase non è pronta in tempo, legge la voce del browser.`
+        : 'Narratore: voce del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env.';
+  }
+
   socket.on('connect', () => {
-    socket.emit('tavolo:entra', chiave, (r = {}) => {
-      if (r.errore) {
-        $('errore').textContent = r.errore;
+    if (!codice) {
+      $('errore').textContent = 'Manca il codice della partita: creala dalla pagina iniziale.';
+      return;
+    }
+    // Prima ci si presenta alla stanza, poi si sblocca il tavolo con la chiave.
+    socket.emit('stanza:entra', { codice }, (s = {}) => {
+      if (s.errore) {
+        $('errore').textContent = s.errore;
         return;
       }
-      $('errore').textContent = '';
-      $('indirizzo').textContent = r.urlGiocatori;
-      $('qr').src = `/qr.svg?${Date.now()}`;
-      $('stato-voce').textContent = r.voce
-        ? `Narratore: voce teatrale ${r.voce}. Se una frase non è pronta in tempo, legge la voce del browser.`
-        : 'Narratore: voce del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env.';
+      socket.emit('tavolo:entra', chiave, (r = {}) => {
+        if (r.errore) {
+          $('errore').textContent = r.errore;
+          return;
+        }
+        $('errore').textContent = '';
+        $('indirizzo').textContent = r.urlGiocatori;
+        $('codice-stanza').textContent = codice;
+        $('qr').src = `/qr.svg?c=${codice}&v=${Date.now()}`;
+        voceDescr = r.voce;
+        aggiornaNotaVoce();
+      });
     });
   });
   socket.on('disconnect', () => { $('errore').textContent = 'Connessione al server persa, riprovo…'; });
   socket.on('stato', (s) => {
+    const prima = stato?.impostazioni?.narratoreUmano;
     stato = s;
     scadenzaLocale = s.restanteMs != null ? performance.now() + s.restanteMs : null;
+    document.body.dataset.narratore = s.impostazioni?.narratoreUmano ? 'umano' : 'auto';
+    if (prima !== s.impostazioni?.narratoreUmano) aggiornaNotaVoce();
     render();
   });
 
@@ -120,7 +147,13 @@
   // Le narrazioni arrivano in coda; al server si risponde quando la lettura è finita.
   // Ordine: effetto sonoro, poi la voce teatrale (se il server ha il file) o quella del browser.
   let coda = Promise.resolve();
-  socket.on('narra', ({ id, testo, audio, suono }) => {
+  socket.on('narra', ({ id, testo, audio, suono, umano }) => {
+    // Narratore in carne e ossa: la frase la legge una persona e la partita va
+    // avanti quando preme «frase letta». Resta solo l'eventuale effetto sonoro.
+    if (umano) {
+      coda = coda.then(() => (audioAttivo ? Suoni.effetto(suono) : null));
+      return;
+    }
     coda = coda
       .then(async () => {
         if (!audioAttivo) return dormi(1200 + testo.length * 45);
@@ -252,6 +285,23 @@
   });
   $('al-voto').addEventListener('click', () => socket.emit('tavolo:alVoto'));
   $('allunga').addEventListener('click', () => socket.emit('tavolo:allunga'));
+  $('avanti-turno').addEventListener('click', () => socket.emit('tavolo:avantiTurno'));
+
+  // Narratore in carne e ossa: «frase letta» conferma la frase in corso.
+  $('frase-letta').addEventListener('click', () => {
+    if (!stato?.narrazioneId) return;
+    fraseLettaId = stato.narrazioneId;
+    socket.emit('tavolo:narrazioneFinita', fraseLettaId);
+    render();
+  });
+  // Invio = «frase letta» (la barra spaziatrice resta la pausa).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.target.closest('input, select, textarea, button, summary')) return;
+    if (!$('frase-letta').hidden) $('frase-letta').click();
+  });
+  $('narratore-umano').addEventListener('change', (e) => {
+    socket.emit('tavolo:impostazioni', { narratoreUmano: e.target.checked });
+  });
 
   function pausaORipresa() {
     if (!stato || stato.fase === 'lobby' || stato.fase === 'fine') return;
@@ -362,6 +412,11 @@
       .join('');
     const rivela = s.impostazioni.rivelaRuoli;
     $('rivela-ruoli').checked = rivela;
+    const umano = Boolean(s.impostazioni.narratoreUmano);
+    $('narratore-umano').checked = umano;
+    $('spiega-narratore').textContent = umano
+      ? 'Tu leggi il copione ad alta voce e premi «frase letta» per andare avanti: l’ideale a distanza, in chiamata vocale.'
+      : 'Il tavolo racconta da solo, con la voce teatrale o quella del browser: l’ideale nella stessa stanza.';
     $('spiega-rivela').textContent = rivela
       ? 'Alla morte il narratore annuncia il ruolo; di notte i ruoli già morti non vengono più chiamati.'
       : 'I ruoli dei morti restano segreti fino a fine partita; di notte il narratore chiama anche i ruoli morti, per non svelare niente.';
@@ -403,6 +458,11 @@
       ? s.ultimoVoto.map((v) => `<span>${esc(v.da)} → <strong>${esc(v.a)}</strong></span>`).join('')
       : '';
 
+    const umano = Boolean(s.impostazioni?.narratoreUmano);
+    const fraseDaLeggere = umano && s.narrazione && s.fase !== 'fine' && s.narrazioneId !== fraseLettaId;
+    $('frase-letta').hidden = !fraseDaLeggere;
+    $('suggerimento-narratore').hidden = !fraseDaLeggere;
+    $('avanti-turno').hidden = !(umano && !['lobby', 'giorno', 'fine'].includes(s.fase));
     $('al-voto').hidden = s.fase !== 'giorno';
     $('pausa').hidden = s.fase === 'fine';
     $('pausa').textContent = s.inPausa ? '▶︎ Riprendi' : '⏸ Pausa';

@@ -10,13 +10,16 @@
     scrivi(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* niente */ } },
   };
 
-  const CHIAVE = 'lupi-mannari-token';
+  // Il codice della stanza arriva dal link (…/gioca?c=ABCD); il token è salvato per
+  // stanza, così si può rientrare solo nella propria partita.
+  const codice = (new URLSearchParams(location.search).get('c') || '').toUpperCase();
+  const CHIAVE = `lupi-mannari-token-${codice}`;
   const ETICHETTE = {
     lobby: 'In attesa', ruoli: 'Ruoli', notte: 'Notte', alba: 'Alba',
     giorno: 'Giorno', voto: 'Votazione', verdetto: 'Verdetto', sparo: 'Cacciatore', fine: 'Fine',
   };
 
-  let token = memoria.leggi(CHIAVE);
+  let token = codice ? memoria.leggi(CHIAVE) : null;
   let dentro = false;
   let stato = null;
   // "collegato" diventa vero solo quando il server ha riconosciuto questo telefono
@@ -96,8 +99,20 @@
 
   socket.on('connect', () => {
     $('connessione').hidden = true;
-    if (token) entra();
-    else mostra('ingresso');
+    if (!codice) {
+      esci('Manca il codice della partita: apri il link che hai ricevuto da chi l’ha creata.');
+      return;
+    }
+    $('dove').textContent = codice;
+    // Prima ci si presenta alla stanza, poi si entra come giocatori.
+    socket.emit('stanza:entra', { codice }, (r = {}) => {
+      if (r.errore) {
+        esci(r.errore);
+        return;
+      }
+      if (token) entra();
+      else mostra('ingresso');
+    });
   });
   socket.on('disconnect', () => {
     collegato = false;
@@ -292,7 +307,8 @@
   function htmlAzione(s, me) {
     if (s.fase === 'lobby' && s.tutorial) return htmlTutorial(s, me);
     if (s.fase === 'lobby') {
-      return `<div class="attesa"><p>Sei dentro! Aspettiamo che il tavolo avvii la partita.</p>
+      return `<div class="attesa"><p>Sei dentro nella stanza <strong>${esc(codice)}</strong>!
+        Aspettiamo che il narratore avvii la partita.</p>
         <button class="secondario" data-esci>Esci</button></div>`;
     }
     if (s.fase === 'fine') {
