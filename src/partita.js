@@ -135,9 +135,13 @@ class Partita {
     });
 
     // Comandi accettati solo dal tavolo (che conosce la chiave).
+    // Se il socket non ha (ancora) sbloccato il tavolo, chi aspetta una risposta riceve un errore
+    // invece del silenzio: succede quando un comando parte subito dopo una riconnessione.
     const tavolo = (evento, fn) =>
       socket.on(evento, (...args) => {
-        if (socket.data.tavolo) fn(...args);
+        if (socket.data.tavolo) return fn(...args);
+        const cb = args[args.length - 1];
+        rispondi(typeof cb === 'function' ? cb : null, { errore: 'Tavolo non ancora ricollegato: riprova.' });
       });
     tavolo('tavolo:avvia', (cb) => {
       const errore = this.avvia();
@@ -174,9 +178,13 @@ class Partita {
     });
     // Con il narratore in carne e ossa: chiude l'attesa corrente, ma mai prima del
     // tempo minimo (che di notte evita di capire dal cronometro chi ha agito).
-    tavolo('tavolo:avantiTurno', () => {
+    tavolo('tavolo:avantiTurno', (cb) => {
+      // Con il narratore in carne e ossa «Avanti» chiude anche la frase in attesa di conferma.
+      if (this.impostazioni.narratoreUmano) this.attesaNarrazione?.risolvi();
       this.forzaAvanti = true;
-      this.riprendi();
+      if (this.pausa) this.riprendi();
+      else this.trasmetti();
+      rispondi(cb, { ok: true });
     });
     tavolo('tavolo:pausa', () => this.mettiInPausa());
     tavolo('tavolo:riprendi', () => this.riprendi());
@@ -185,8 +193,9 @@ class Partita {
       this.azzera();
       this.trasmetti();
     });
-    tavolo('tavolo:narrazioneFinita', (id) => {
+    tavolo('tavolo:narrazioneFinita', (id, cb) => {
       if (this.attesaNarrazione?.id === id) this.attesaNarrazione.risolvi();
+      rispondi(cb, { ok: true });
     });
 
     socket.on('giocatore:entra', (dati, cb) => {
@@ -409,8 +418,13 @@ class Partita {
       notte: this.notte,
       narrazione: this.narrazione,
       narrazioneId: this.narrId,
+      // Frase che il server sta ancora aspettando dal tavolo (narratore umano: «frase letta»).
+      attesaLettura: this.attesaNarrazione?.id ?? null,
       // In pausa il tempo restante resta fermo a quello del momento della pausa.
       restanteMs: this.scadenza ? Math.max(0, this.scadenza - (this.pausa?.da ?? Date.now())) : null,
+      // «Avanti» chiude l'attesa solo dopo il tempo minimo: il tavolo mostra quanto manca.
+      minimoMs: this.minimo ? Math.round(Math.max(0, this.minimo - (this.pausa?.da ?? Date.now()))) : null,
+      avantiChiesto: Boolean(this.forzaAvanti && this.scadenza),
       inPausa: Boolean(this.pausa),
       tutorial: this.tutorialPubblico(),
       vincitore: this.vincitore,
@@ -626,6 +640,8 @@ class Partita {
         risolvi();
       }
       this.attesaNarrazione = { id, risolvi: fatto };
+      // Il tavolo deve sapere quale frase si aspetta (serve dopo una riconnessione).
+      if (umano) this.trasmetti();
     });
     await dormi(this.t.pausa);
     this.controlla(run);

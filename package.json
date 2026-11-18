@@ -8,7 +8,8 @@
     "start": "node server.js",
     "bot": "node scripts/bot.js",
     "simula": "node scripts/simula.js",
-    "prova:stanze": "node scripts/prova-stanze.js"
+    "prova:stanze": "node scripts/prova-stanze.js",
+    "prova:narratore": "node scripts/prova-narratore.js"
   },
   "engines": {
     "node": ">=20.12"
