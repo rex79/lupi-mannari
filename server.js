@@ -84,7 +84,7 @@ function avviaServer(opzioni = {}) {
   function creaStanza({ narratoreUmano = true } = {}) {
     let codice = codiceNuovo();
     while (stanze.has(codice)) codice = codiceNuovo();
-    const partita = new Partita(io, opzioniPartita({ narratoreUmano }));
+    const partita = new Partita(io, opzioniPartita({ narratoreUmano, salaTavolo: `tavolo:${codice}` }));
     const stanza = {
       codice,
       partita,
