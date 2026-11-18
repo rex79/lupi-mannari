@@ -117,7 +117,7 @@ class Partita {
   collega(socket, { chiave, urlGiocatori }) {
     socket.on('tavolo:entra', (k, cb) => {
       if (k !== chiave) {
-        return rispondi(cb, { errore: 'Chiave del tavolo non valida: usa il link stampato nel terminale.' });
+        return rispondi(cb, { errore: 'Chiave del tavolo non valida: apri il link del tavolo con la chiave (?k=…).' });
       }
       socket.data.tavolo = true;
       socket.join('tavolo');

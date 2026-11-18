@@ -1,0 +1,21 @@
+# Blueprint Render: su https://dashboard.render.com → New → Blueprint, scegli questo repository.
+# Render crea il servizio, genera la chiave del tavolo e aggiorna il gioco a ogni push su main.
+services:
+  - type: web
+    name: lupi-mannari
+    runtime: node
+    plan: free            # gratis: si addormenta dopo ~15 min senza visite (il primo accesso impiega ~1 min)
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /salute
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Chiave segreta del tavolo, generata da Render: la trovi in Environment del servizio.
+      - key: CHIAVE_TAVOLO
+        generateValue: true
+      - key: MIN_GIOCATORI
+        value: "4"

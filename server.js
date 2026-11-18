@@ -24,6 +24,12 @@ function ipLocale() {
   return 'localhost';
 }
 
+// Indirizzo pubblico del server quando gira online: URL_PUBBLICO, oppure quello che Render imposta da solo.
+function urlPubblico(opzioni = {}) {
+  const url = opzioni.urlPubblico ?? (process.env.URL_PUBBLICO || process.env.RENDER_EXTERNAL_URL || '');
+  return url.replace(/\/+$/, '');
+}
+
 // Legge il file .env (chiave della voce e altre impostazioni), se esiste.
 function caricaEnv() {
   if (typeof process.loadEnvFile !== 'function') return;
@@ -50,6 +56,8 @@ function avviaServer(opzioni = {}) {
   let urlGiocatori = '';
   const pubblica = path.join(__dirname, 'public');
 
+  // Controllo di salute per l'hosting (Render lo usa per sapere se il server è vivo).
+  app.get('/salute', (req, res) => res.type('text').send('ok'));
   app.get('/tavolo', (req, res) => res.sendFile(path.join(pubblica, 'tavolo.html')));
   app.get('/qr.svg', async (req, res) => {
     const svg = await QRCode.toString(urlGiocatori, { type: 'svg', margin: 1 });
@@ -63,19 +71,26 @@ function avviaServer(opzioni = {}) {
   return new Promise((resolve) => {
     server.listen(porta, '0.0.0.0', () => {
       const p = server.address().port;
-      urlGiocatori = `http://${ipLocale()}:${p}`;
-      const urlTavolo = `http://localhost:${p}/tavolo?k=${chiave}`;
-      resolve({ server, io, partita, voce, chiave, porta: p, urlGiocatori, urlTavolo });
+      // Online (es. Render) l'indirizzo pubblico arriva dall'ambiente; in casa si usa l'IP della Wi-Fi.
+      const pubblico = urlPubblico(opzioni);
+      urlGiocatori = pubblico || `http://${ipLocale()}:${p}`;
+      const urlTavolo = `${pubblico || `http://localhost:${p}`}/tavolo?k=${chiave}`;
+      resolve({ server, io, partita, voce, chiave, porta: p, urlGiocatori, urlTavolo, remoto: Boolean(pubblico) });
     });
   });
 }
 
 if (require.main === module) {
   caricaEnv();
-  avviaServer().then(({ urlTavolo, urlGiocatori, voce }) => {
+  avviaServer().then(({ urlTavolo, urlGiocatori, voce, remoto }) => {
     console.log('\n🐺  Lupi mannari è pronto!\n');
-    console.log(`   Tavolo (apri su questo computer):  ${urlTavolo}`);
-    console.log(`   Giocatori (telefoni sulla stessa Wi-Fi):  ${urlGiocatori}\n`);
+    if (remoto) {
+      console.log(`   Tavolo (telefono del narratore):  ${urlTavolo}`);
+      console.log(`   Giocatori (qualsiasi rete):  ${urlGiocatori}\n`);
+    } else {
+      console.log(`   Tavolo (apri su questo computer):  ${urlTavolo}`);
+      console.log(`   Giocatori (telefoni sulla stessa Wi-Fi):  ${urlGiocatori}\n`);
+    }
     if (!voce) {
       console.log('   Voce: quella del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env\n');
       return;

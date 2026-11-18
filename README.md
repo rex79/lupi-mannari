@@ -24,6 +24,23 @@ le connessioni in entrata a `node`: rispondi **Consenti**.
 Sul tavolo premi **Attiva l’audio**: i browser fanno suonare la pagina solo dopo un clic.
 Dal pannello **🎚️ Audio** regoli musica, effetti e voce.
 
+## Giocare online (Render, solo telefoni)
+
+Il server può girare su [Render](https://render.com): niente computer al tavolo, basta un telefono per il narratore
+e uno per ogni giocatore, con qualsiasi connessione (Wi-Fi o dati).
+
+1. Su https://dashboard.render.com → **New → Blueprint**, collega GitHub e scegli questo repository.
+   Render legge `render.yaml`, crea il servizio `lupi-mannari` e lo aggiorna da solo a ogni push su `main`.
+2. Nel servizio, sezione **Environment**, copia il valore di `CHIAVE_TAVOLO`.
+3. Sul telefono del narratore apri `https://<nome-servizio>.onrender.com/tavolo?k=<CHIAVE_TAVOLO>`.
+   La chiave resta salvata nel telefono: le volte dopo basta `/tavolo`.
+4. I giocatori inquadrano il QR sul tavolo o aprono `https://<nome-servizio>.onrender.com`.
+
+L'indirizzo pubblico lo imposta Render (`RENDER_EXTERNAL_URL`); su un altro hosting si usa `URL_PUBBLICO`.
+Note: sul piano gratuito il server si addormenta dopo circa 15 minuti senza visite e il primo accesso impiega
+circa un minuto; a ogni riavvio o nuovo deploy la partita in corso si perde. Tieni lo schermo del narratore acceso
+e il browser in primo piano: i telefoni sospendono audio e voce quando la pagina va in background.
+
 ## Voce del narratore e suoni
 
 **Voce teatrale (consigliata).** Il narratore può recitare con una voce generata da OpenAI
