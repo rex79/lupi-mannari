@@ -70,6 +70,9 @@ function piuVotati(valori) {
 class Partita {
   constructor(io, opzioni = {}) {
     this.io = io;
+    // Canale Socket.IO dei tavoli di QUESTA partita: con più stanze sullo stesso server
+    // ognuna deve avere il suo, altrimenti un tavolo riceve lo stato delle altre partite.
+    this.salaTavolo = opzioni.salaTavolo ?? 'tavolo';
     this.voce = opzioni.voce ?? null; // voce teatrale (src/voce.js), facoltativa
     this.scala = opzioni.scalaTempi ?? 1;
     this.minGiocatori = opzioni.minGiocatori ?? 4;
@@ -126,7 +129,7 @@ class Partita {
         return rispondi(cb, { errore: 'Chiave del tavolo non valida: controlla di avere aperto il link del narratore.' });
       }
       socket.data.tavolo = true;
-      socket.join('tavolo');
+      socket.join(this.salaTavolo);
       rispondi(cb, { ok: true, urlGiocatori: urlGiocatori(), voce: this.voce?.descrizione() ?? null });
       socket.emit('stato', this.statoPubblico());
     });
@@ -461,7 +464,7 @@ class Partita {
   // Il tavolo riceve solo lo stato pubblico; ogni telefono il proprio stato privato.
   trasmetti() {
     const pubblico = this.statoPubblico();
-    this.io.to('tavolo').emit('stato', pubblico);
+    this.io.to(this.salaTavolo).emit('stato', pubblico);
     for (const p of this.giocatori.values()) {
       if (p.connesso && p.socketId) this.io.to(p.socketId).emit('stato', { ...pubblico, io: this.statoPrivato(p) });
     }
@@ -600,7 +603,7 @@ class Partita {
     await this.attendiRipresa(run);
     this.controlla(run);
     const id = ++this.narrId;
-    const tavoli = this.io.sockets.adapter.rooms.get('tavolo')?.size ?? 0;
+    const tavoli = this.io.sockets.adapter.rooms.get(this.salaTavolo)?.size ?? 0;
     const umano = this.impostazioni.narratoreUmano;
     // Con la voce teatrale si aspetta il file audio, ma mai più di qualche secondo:
     // se tarda, il tavolo legge con la voce del browser e il file servirà la prossima volta.
@@ -613,7 +616,7 @@ class Partita {
     // Narratore umano: la partita va avanti quando preme «frase letta» sul tavolo
     // (rete di sicurezza a 10 minuti, nel caso si sia allontanato).
     const limite = umano && tavoli ? 600000 : tavoli ? stima * 2 + 8000 : stima * this.scala;
-    this.io.to('tavolo').emit('narra', { id, testo, audio, suono, umano });
+    this.io.to(this.salaTavolo).emit('narra', { id, testo, audio, suono, umano });
     await new Promise((risolvi) => {
       const timer = setTimeout(fatto, limite);
       const self = this;

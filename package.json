@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "bot": "node scripts/bot.js",
-    "simula": "node scripts/simula.js"
+    "simula": "node scripts/simula.js",
+    "prova:stanze": "node scripts/prova-stanze.js"
   },
   "engines": {
     "node": ">=20.12"
