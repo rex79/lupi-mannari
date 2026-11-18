@@ -17,6 +17,8 @@ jobs:
       - run: npm run simula -- 8
       # Due partite sullo stesso server non devono vedersi a vicenda.
       - run: npm run prova:stanze
+      # «Frase letta» del narratore umano: mai persa in silenzio.
+      - run: npm run prova:narratore
 
   immagine-docker:
     runs-on: ubuntu-latest
