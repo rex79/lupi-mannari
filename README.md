@@ -23,8 +23,8 @@ il link e il QR per i giocatori.
 
 - **In casa**: i telefoni si collegano alla stessa Wi-Fi (il link usa l'IP locale). La prima volta
   macOS può chiedere se consentire le connessioni in entrata a `node`: rispondi **Consenti**.
-- **A distanza / on-line**: vedi [DEPLOYMENT.md](DEPLOYMENT.md) per mettere il gioco su un VPS
-  con HTTPS, poi basta condividere il link.
+- **A distanza / on-line**: vedi [Giocare online su Render](#giocare-online-su-render-solo-telefoni) oppure
+  [DEPLOYMENT.md](DEPLOYMENT.md) per un VPS con HTTPS, poi basta condividere il link.
 
 Sul tavolo premi **Attiva l’audio**: i browser fanno suonare la pagina solo dopo un clic.
 Dal pannello **🎚️ Audio** regoli musica, effetti e voce.
@@ -38,6 +38,23 @@ Alla creazione della partita (e nella lobby, sezione "Regole") si sceglie:
   (mai prima del tempo minimo dei turni notturni, che protegge i segreti). Musica ed effetti restano.
 - 🔊 **Narratore automatico**: il tavolo racconta da solo con la voce (teatrale o del browser),
   come nella versione originale.
+
+## Giocare online su Render (solo telefoni)
+
+Il server può girare su [Render](https://render.com): niente computer, basta un telefono per il narratore
+e uno per ogni giocatore, con qualsiasi connessione (Wi-Fi o dati). Per un VPS tuo vedi [DEPLOYMENT.md](DEPLOYMENT.md).
+
+1. Su https://dashboard.render.com → **New → Blueprint**, collega GitHub e scegli questo repository.
+   Render legge `render.yaml`, crea il servizio `lupi-mannari` e lo aggiorna da solo a ogni push su `main`.
+2. Sul telefono del narratore apri `https://<nome-servizio>.onrender.com` e premi **Crea la partita**:
+   si apre il tavolo (il link contiene la chiave segreta, tienilo per te) con codice, link e QR.
+3. I giocatori inquadrano il QR o aprono l'indirizzo e scrivono il codice.
+
+L'indirizzo pubblico lo imposta Render (`RENDER_EXTERNAL_URL`); non serve `URL_PUBBLICO`, e non va impostato
+`CHIAVE_TAVOLO` (ogni partita ha già la sua chiave).
+Note: sul piano gratuito il server si addormenta dopo circa 15 minuti senza visite e il primo accesso impiega
+circa un minuto; a ogni riavvio o nuovo deploy le partite in corso si perdono. Tieni lo schermo del narratore acceso
+e il browser in primo piano: i telefoni sospendono audio e voce quando la pagina va in background.
 
 ## Voce del narratore e suoni
 

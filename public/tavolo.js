@@ -27,7 +27,7 @@
       ? 'Narratore in carne e ossa: la voce automatica non viene usata. Musica ed effetti restano disponibili.'
       : voceDescr
         ? `Narratore: voce teatrale ${voceDescr}. Se una frase non è pronta in tempo, legge la voce del browser.`
-        : 'Narratore: voce del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env.';
+        : 'Narratore: voce del browser (per la voce teatrale serve OPENAI_API_KEY sul server).';
   }
 
   socket.on('connect', () => {
@@ -321,7 +321,7 @@
     }
   });
 
-  // Schermo sempre acceso (funziona su localhost).
+  // Schermo sempre acceso (funziona su localhost e in https).
   async function tieniAcceso() {
     try { await navigator.wakeLock?.request('screen'); } catch { /* non disponibile */ }
   }

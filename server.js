@@ -46,7 +46,8 @@ const normCodice = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''
 function avviaServer(opzioni = {}) {
   const porta = opzioni.porta ?? Number(process.env.PORT || 3000);
   const maxStanze = opzioni.maxStanze ?? Number(process.env.MAX_STANZE || 100);
-  const urlFisso = String(opzioni.urlBase || process.env.URL_PUBBLICO || '').replace(/\/$/, '');
+  // URL_PUBBLICO su un VPS; su Render l'indirizzo pubblico lo imposta Render stesso.
+  const urlFisso = String(opzioni.urlBase || process.env.URL_PUBBLICO || process.env.RENDER_EXTERNAL_URL || '').replace(/\/+$/, '');
   const voce = opzioni.voce !== undefined ? opzioni.voce : Voce.daAmbiente(CARTELLA_VOCE);
   const app = express();
   app.disable('x-powered-by');
@@ -179,7 +180,8 @@ if (require.main === module) {
   avviaServer().then(({ porta, voce }) => {
     console.log('\n🐺  Lupi mannari è pronto!\n');
     console.log(`   Apri http://localhost:${porta} e crea una partita: otterrai il codice da condividere.`);
-    if (process.env.URL_PUBBLICO) console.log(`   Indirizzo pubblico: ${process.env.URL_PUBBLICO}`);
+    const pubblico = process.env.URL_PUBBLICO || process.env.RENDER_EXTERNAL_URL;
+    if (pubblico) console.log(`   Indirizzo pubblico: ${pubblico}`);
     console.log('');
     if (!voce) {
       console.log('   Voce: quella del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env\n');
