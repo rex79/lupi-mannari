@@ -18,6 +18,7 @@
   let voceDescr = null; // descrizione della voce teatrale, se c'è
   let fraseLettaId = 0; // narrazioneId già confermato dal narratore umano
   let scadenzaLocale = null;
+  let minimoLocale = null; // da quando «Avanti» può chiudere l'attesa
 
   // ------------------------------------------------------------ connessione
 
@@ -64,6 +65,7 @@
     const prima = stato?.impostazioni?.narratoreUmano;
     stato = s;
     scadenzaLocale = s.restanteMs != null ? performance.now() + s.restanteMs : null;
+    minimoLocale = s.minimoMs ? performance.now() + s.minimoMs : null;
     document.body.dataset.narratore = s.impostazioni?.narratoreUmano ? 'umano' : 'auto';
     if (prima !== s.impostazioni?.narratoreUmano) aggiornaNotaVoce();
     render();
@@ -289,7 +291,12 @@
   });
   $('al-voto').addEventListener('click', () => socket.emit('tavolo:alVoto'));
   $('allunga').addEventListener('click', () => socket.emit('tavolo:allunga'));
-  $('avanti-turno').addEventListener('click', () => socket.emit('tavolo:avantiTurno'));
+  $('avanti-turno').addEventListener('click', () => {
+    socket.timeout(5000).emit('tavolo:avantiTurno', (err, r = {}) => {
+      if (err || r.errore) $('errore').textContent = r.errore || 'Il server non ha ricevuto «Avanti»: premi di nuovo.';
+      else if ($('errore').textContent.includes('Avanti')) $('errore').textContent = '';
+    });
+  });
 
   // Narratore in carne e ossa: «frase letta» conferma la frase in corso.
   $('frase-letta').addEventListener('click', () => {
@@ -509,5 +516,13 @@
     } else {
       el.textContent = '';
     }
+    // «Avanti» di notte agisce solo dopo il tempo minimo del turno: si mostra quanto manca.
+    const manca = minimoLocale != null && !stato?.inPausa ? Math.ceil((minimoLocale - performance.now()) / 1000) : 0;
+    const avanti = $('avanti-turno');
+    const testo = manca > 0
+      ? stato?.avantiChiesto ? `⏳ Avanti tra ${manca} s` : `⏭ Avanti (tra ${manca} s)`
+      : '⏭ Avanti';
+    if (avanti.textContent !== testo) avanti.textContent = testo;
+    avanti.classList.toggle('attiva', manca > 0 && Boolean(stato?.avantiChiesto));
   }, 250);
 })();

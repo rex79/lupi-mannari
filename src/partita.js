@@ -178,11 +178,13 @@ class Partita {
     });
     // Con il narratore in carne e ossa: chiude l'attesa corrente, ma mai prima del
     // tempo minimo (che di notte evita di capire dal cronometro chi ha agito).
-    tavolo('tavolo:avantiTurno', () => {
+    tavolo('tavolo:avantiTurno', (cb) => {
       // Con il narratore in carne e ossa «Avanti» chiude anche la frase in attesa di conferma.
       if (this.impostazioni.narratoreUmano) this.attesaNarrazione?.risolvi();
       this.forzaAvanti = true;
-      this.riprendi();
+      if (this.pausa) this.riprendi();
+      else this.trasmetti();
+      rispondi(cb, { ok: true });
     });
     tavolo('tavolo:pausa', () => this.mettiInPausa());
     tavolo('tavolo:riprendi', () => this.riprendi());
@@ -420,6 +422,9 @@ class Partita {
       attesaLettura: this.attesaNarrazione?.id ?? null,
       // In pausa il tempo restante resta fermo a quello del momento della pausa.
       restanteMs: this.scadenza ? Math.max(0, this.scadenza - (this.pausa?.da ?? Date.now())) : null,
+      // «Avanti» chiude l'attesa solo dopo il tempo minimo: il tavolo mostra quanto manca.
+      minimoMs: this.minimo ? Math.round(Math.max(0, this.minimo - (this.pausa?.da ?? Date.now()))) : null,
+      avantiChiesto: Boolean(this.forzaAvanti && this.scadenza),
       inPausa: Boolean(this.pausa),
       tutorial: this.tutorialPubblico(),
       vincitore: this.vincitore,

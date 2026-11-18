@@ -6,6 +6,7 @@
 //   2. un tavolo non ancora ricollegato riceve un errore, non il silenzio
 //   3. «frase letta» confermata fa andare avanti la partita
 //   4. «Avanti» chiude anche la frase in attesa
+//   5. di notte «Avanti» è confermato, lo stato lo mostra e il turno si chiude al tempo minimo
 const path = require('path');
 const { io } = require('socket.io-client');
 const { avviaServer } = require(path.join(__dirname, '..', 'server.js'));
@@ -46,6 +47,19 @@ const emetti = (c, ...args) => new Promise((ok) => c.timeout(3000).emit(...args,
   t.emit('tavolo:avantiTurno');
   await dormi(800);
   verifica(st.narrazioneId > ferma, `«Avanti» chiude la frase in attesa (${ferma} → ${st.narrazioneId})`);
+
+  // Arriva al primo turno notturno (si confermano le frasi finché non c'è una sottofase).
+  for (let i = 0; i < 20 && !st.sottofase; i++) {
+    if (st.attesaLettura) t.emit('tavolo:narrazioneFinita', st.attesaLettura);
+    await dormi(150);
+  }
+  const turno = st.sottofase;
+  verifica(Boolean(turno) && st.minimoMs != null, `turno notturno «${turno}» con tempo minimo nello stato (${st.minimoMs} ms)`);
+  const r3 = await emetti(t, 'tavolo:avantiTurno');
+  await dormi(50);
+  verifica(r3?.ok === true && (st.avantiChiesto || st.sottofase !== turno), `«Avanti» di notte confermato e visibile nello stato`);
+  await dormi(2500);
+  verifica(st.sottofase !== turno, `il turno «${turno}» si chiude dopo il tempo minimo (ora: ${st.fase}/${st.sottofase})`);
 
   process.exit(problemi.length ? 1 : 0);
 })();
