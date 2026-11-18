@@ -74,7 +74,7 @@ const ORDINE_NOTTE = ['cupido', 'lupo', 'strega', 'veggente', 'guardia'];
 
 // Quali ruoli usare in base al numero di giocatori e ai ruoli extra scelti.
 function composizione(n, extra = []) {
-  const lupi = n <= 6 ? 1 : n <= 10 ? 2 : 3;
+  const lupi = n <= 5 ? 1 : n <= 10 ? 2 : 3;
   const ruoli = Array(lupi).fill('lupo');
   ruoli.push('veggente');
   if (n >= 6) ruoli.push('guardia');
