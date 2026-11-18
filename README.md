@@ -1,7 +1,12 @@
-# 🐺 Lupi mannari (versione da tavolo)
+# 🐺 Lupi mannari
 
-Una partita a Lupi mannari nella stessa stanza: ognuno usa il proprio telefono come carta segreta,
-mentre il computer fa da **narratore** e parla a tutti.
+Una partita a Lupi mannari con il telefono come carta segreta: si gioca nella stessa stanza
+oppure **a distanza**, ognuno da casa propria. Il narratore può essere il computer (voce
+automatica, anche teatrale) oppure **una persona in carne e ossa** che legge il copione ad alta
+voce — perfetto a distanza, insieme a una chiamata vocale.
+
+Ogni partita ha un **codice di 4 lettere** da condividere; sullo stesso server possono
+giocare più gruppi contemporaneamente.
 
 ## Avvio
 
@@ -12,33 +17,43 @@ npm install
 npm start
 ```
 
-Il terminale stampa due indirizzi:
+Apri `http://localhost:3000` e premi **Crea la partita**: si apre il **tavolo del narratore**
+(con la chiave segreta nel link: tienilo per te). Sul tavolo trovi il **codice della partita**,
+il link e il QR per i giocatori.
 
-- **Tavolo**: `http://localhost:3000/tavolo?k=xxxxxx`, da aprire sul Mac (meglio se collegato a TV o cassa).
-  La chiave `k` impedisce ai giocatori di comandare la partita dal telefono.
-- **Giocatori**: `http://192.168.x.x:3000`, da aprire sui telefoni (c'è anche il QR sul tavolo).
-
-I telefoni devono essere sulla stessa Wi-Fi del Mac. La prima volta macOS può chiedere se consentire
-le connessioni in entrata a `node`: rispondi **Consenti**.
+- **In casa**: i telefoni si collegano alla stessa Wi-Fi (il link usa l'IP locale). La prima volta
+  macOS può chiedere se consentire le connessioni in entrata a `node`: rispondi **Consenti**.
+- **A distanza / on-line**: vedi [Giocare online su Render](#giocare-online-su-render-solo-telefoni) oppure
+  [DEPLOYMENT.md](DEPLOYMENT.md) per un VPS con HTTPS, poi basta condividere il link.
 
 Sul tavolo premi **Attiva l’audio**: i browser fanno suonare la pagina solo dopo un clic.
 Dal pannello **🎚️ Audio** regoli musica, effetti e voce.
 
-## Giocare online (Render, solo telefoni)
+## Chi narra: persona o voce automatica
 
-Il server può girare su [Render](https://render.com): niente computer al tavolo, basta un telefono per il narratore
-e uno per ogni giocatore, con qualsiasi connessione (Wi-Fi o dati).
+Alla creazione della partita (e nella lobby, sezione "Regole") si sceglie:
+
+- 🎭 **Narratore in carne e ossa**: il copione compare grande sul tavolo, una persona lo legge
+  ad alta voce e preme **✓ Frase letta** (o Invio) per andare avanti; **⏭ Avanti** chiude le attese
+  (mai prima del tempo minimo dei turni notturni, che protegge i segreti). Musica ed effetti restano.
+- 🔊 **Narratore automatico**: il tavolo racconta da solo con la voce (teatrale o del browser),
+  come nella versione originale.
+
+## Giocare online su Render (solo telefoni)
+
+Il server può girare su [Render](https://render.com): niente computer, basta un telefono per il narratore
+e uno per ogni giocatore, con qualsiasi connessione (Wi-Fi o dati). Per un VPS tuo vedi [DEPLOYMENT.md](DEPLOYMENT.md).
 
 1. Su https://dashboard.render.com → **New → Blueprint**, collega GitHub e scegli questo repository.
    Render legge `render.yaml`, crea il servizio `lupi-mannari` e lo aggiorna da solo a ogni push su `main`.
-2. Nel servizio, sezione **Environment**, copia il valore di `CHIAVE_TAVOLO`.
-3. Sul telefono del narratore apri `https://<nome-servizio>.onrender.com/tavolo?k=<CHIAVE_TAVOLO>`.
-   La chiave resta salvata nel telefono: le volte dopo basta `/tavolo`.
-4. I giocatori inquadrano il QR sul tavolo o aprono `https://<nome-servizio>.onrender.com`.
+2. Sul telefono del narratore apri `https://<nome-servizio>.onrender.com` e premi **Crea la partita**:
+   si apre il tavolo (il link contiene la chiave segreta, tienilo per te) con codice, link e QR.
+3. I giocatori inquadrano il QR o aprono l'indirizzo e scrivono il codice.
 
-L'indirizzo pubblico lo imposta Render (`RENDER_EXTERNAL_URL`); su un altro hosting si usa `URL_PUBBLICO`.
+L'indirizzo pubblico lo imposta Render (`RENDER_EXTERNAL_URL`); non serve `URL_PUBBLICO`, e non va impostato
+`CHIAVE_TAVOLO` (ogni partita ha già la sua chiave).
 Note: sul piano gratuito il server si addormenta dopo circa 15 minuti senza visite e il primo accesso impiega
-circa un minuto; a ogni riavvio o nuovo deploy la partita in corso si perde. Tieni lo schermo del narratore acceso
+circa un minuto; a ogni riavvio o nuovo deploy le partite in corso si perdono. Tieni lo schermo del narratore acceso
 e il browser in primo piano: i telefoni sospendono audio e voce quando la pagina va in background.
 
 ## Voce del narratore e suoni
@@ -122,29 +137,34 @@ come persone vere): utili se siete in pochi, o per provare il gioco da soli. Gio
 Da terminale, per lo sviluppo:
 
 ```bash
-npm run bot -- 5      # in un secondo terminale: 5 bot che si collegano come telefoni
-npm run simula        # partite complete accelerate, solo bot, per controllare la logica
+CODICE=ABCD npm run bot -- 5   # in un secondo terminale: 5 bot nella stanza ABCD
+npm run simula                 # partite complete accelerate, solo bot, per controllare la logica
 ```
 
-Variabili utili: `PORT`, `MIN_GIOCATORI`, `SCALA_TEMPI` (es. `0.3` per partite veloci), `CHIAVE_TAVOLO`.
+Variabili utili: `PORT`, `MIN_GIOCATORI`, `SCALA_TEMPI` (es. `0.3` per partite veloci),
+`CHIAVE_TAVOLO`, `URL_PUBBLICO`, `MAX_STANZE`.
 
 ## Struttura
 
 ```
-server.js            server web + Socket.IO, indirizzi e QR
+server.js            server web + Socket.IO, stanze (codici partita), QR, rotte HTTP
 src/partita.js       logica di gioco: fasi, turni, voti, vittoria (il server decide tutto)
 src/ruoli.js         ruoli e composizione per numero di giocatori
 src/narratore.js     il copione del narratore (aggiungi qui nuove frasi)
 src/voce.js          voce teatrale: sintesi vocale OpenAI con cache su disco
 src/tutorial.js      testi del tutorial vocale "Come si gioca"
 src/bot.js           scelte e tempi dei bot aggiunti dal tavolo
-public/index.html    pagina telefono  (giocatore.js)
-public/tavolo.html   pagina tavolo  (tavolo.js, audio.js per voce, sottofondi ed effetti)
+public/casa.html     pagina iniziale: crea una partita o entra con un codice
+public/gioca.html    pagina telefono  (giocatore.js)
+public/tavolo.html   pagina tavolo / console del narratore  (tavolo.js, audio.js)
 public/audio/        suoni (elenco in suoni.json, istruzioni in LEGGIMI.md)
 scripts/             bot e simulazione
+Dockerfile, docker-compose.yml, Caddyfile, DEPLOYMENT.md   per mettere il gioco on-line
 ```
 
 Ogni telefono riceve solo ciò che il suo giocatore può sapere: i ruoli altrui non lasciano mai il server.
+Ogni stanza è una partita indipendente: i comandi del tavolo sono protetti dalla chiave nel suo link,
+e le stanze abbandonate si cancellano da sole dopo due ore.
 
 ## Idee per i prossimi passi
 

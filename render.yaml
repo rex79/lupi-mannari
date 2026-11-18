@@ -1,5 +1,7 @@
 # Blueprint Render: su https://dashboard.render.com → New → Blueprint, scegli questo repository.
-# Render crea il servizio, genera la chiave del tavolo e aggiorna il gioco a ogni push su main.
+# Render crea il servizio e aggiorna il gioco a ogni push su main.
+# Ogni partita creata dalla pagina iniziale ha il proprio codice e la propria chiave del tavolo:
+# non impostare CHIAVE_TAVOLO, altrimenti tutte le stanze condividerebbero la stessa chiave.
 services:
   - type: web
     name: lupi-mannari
@@ -14,8 +16,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      # Chiave segreta del tavolo, generata da Render: la trovi in Environment del servizio.
-      - key: CHIAVE_TAVOLO
-        generateValue: true
+      - key: MAX_STANZE
+        value: "20"
       - key: MIN_GIOCATORI
         value: "4"

@@ -352,3 +352,44 @@ body.tavolo { font-size: 18px; }
   .ingresso-tavolo { flex-direction: column; text-align: center; }
   .contenitore { padding: 16px; }
 }
+
+/* ------------------------------------------------------------ casa */
+
+.casa-main { max-width: 520px; margin: 0 auto; padding: 16px 16px 48px; }
+.casa-intro { color: var(--tenue); text-align: center; margin: 0 0 28px; }
+.casa-scheda {
+  background: var(--pannello);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.casa-scheda h2 { font-size: 1.3rem; }
+.casa-scheda .grande { margin-top: 14px; }
+.casa-scheda > .nota { margin: 12px 0 0; }
+.casa-scheda form { display: grid; gap: 12px; }
+.casa-scheda form label { color: var(--tenue); }
+.casa-piede { text-align: center; margin-top: 8px; }
+.casa-piede a { color: var(--tenue); }
+.scelte-narratore { display: grid; gap: 10px; }
+.scelte-narratore label { display: block; cursor: pointer; }
+.scelte-narratore input { position: absolute; opacity: 0; pointer-events: none; }
+.biglietto {
+  display: block;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--bordo);
+  background: var(--pannello-2);
+}
+.scelte-narratore input:checked + .biglietto {
+  border-color: var(--accento);
+  background: color-mix(in srgb, var(--accento) 14%, var(--pannello-2));
+}
+.scelte-narratore input:focus-visible + .biglietto { outline: 2px solid var(--accento); outline-offset: 2px; }
+.biglietto .nota { display: block; margin: 4px 0 0; }
+.input-codice { text-transform: uppercase; letter-spacing: 0.35em; text-align: center; font-size: 1.3rem; }
+.codice-grande { letter-spacing: 0.25em; color: var(--accento); font-size: 1.15em; }
+
+/* narratore in carne e ossa */
+#frase-letta { margin-top: 4px; }
+body[data-narratore='umano'] .narrazione-grande { color: var(--accento); }
