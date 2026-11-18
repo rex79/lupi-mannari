@@ -10,7 +10,8 @@
     scrivi(k, v) { try { localStorage.setItem(k, v); } catch { /* niente */ } },
   };
 
-  const chiave = new URLSearchParams(location.search).get('k');
+  // La chiave arriva dal link (?k=…) e resta salvata: così il narratore può riaprire /tavolo anche senza.
+  const chiave = new URLSearchParams(location.search).get('k') || memoria.leggi('lupi-chiave-tavolo');
   const socket = io();
   let stato = null;
   let scadenzaLocale = null;
@@ -24,11 +25,16 @@
         return;
       }
       $('errore').textContent = '';
+      if (chiave) memoria.scrivi('lupi-chiave-tavolo', chiave);
       $('indirizzo').textContent = r.urlGiocatori;
+      // Online (https) i telefoni possono usare qualsiasi rete, anche i dati mobili.
+      if (/^https:/.test(r.urlGiocatori || '')) {
+        $('nota-rete').textContent = 'Funziona con qualsiasi connessione: Wi-Fi o dati del telefono.';
+      }
       $('qr').src = `/qr.svg?${Date.now()}`;
       $('stato-voce').textContent = r.voce
         ? `Narratore: voce teatrale ${r.voce}. Se una frase non è pronta in tempo, legge la voce del browser.`
-        : 'Narratore: voce del browser. Per la voce teatrale aggiungi OPENAI_API_KEY nel file .env.';
+        : 'Narratore: voce del browser (per la voce teatrale serve OPENAI_API_KEY sul server).';
     });
   });
   socket.on('disconnect', () => { $('errore').textContent = 'Connessione al server persa, riprovo…'; });
@@ -271,7 +277,7 @@
     }
   });
 
-  // Schermo sempre acceso (funziona su localhost).
+  // Schermo sempre acceso (funziona su localhost e in https).
   async function tieniAcceso() {
     try { await navigator.wakeLock?.request('screen'); } catch { /* non disponibile */ }
   }
