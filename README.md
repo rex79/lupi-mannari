@@ -97,6 +97,8 @@ e l'atmosfera cambia con il passo (sottofondo e colori della notte, dell'alba…
 
 1. Ognuno entra con il proprio nome; dal tavolo si avvia la partita (minimo 4 giocatori).
 2. Ruoli in base al numero di giocatori: 1 lupo fino a 5, 2 fino a 10, poi 3; sempre una veggente; la guardia da 6 in su.
+   Il numero di lupi si può anche scegliere a mano dalla lobby (sezione "Regole", menu **🐺 Lupi**), fino a un massimo
+   che lascia i lupi in minoranza (con 6 giocatori al massimo 2, con 8 al massimo 3).
    Poi i ruoli aggiuntivi scelti nella lobby (vedi sotto), e il resto contadini.
 3. **Notte**: il narratore chiama Cupido (solo la prima notte), lupi, strega, veggente e guardia,
    saltando i ruoli già morti (il loro ruolo è stato rivelato alla morte, quindi non si svela nulla).
