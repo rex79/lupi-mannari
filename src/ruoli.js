@@ -72,9 +72,20 @@ const EXTRA_PREDEFINITI = ['strega', 'cacciatore'];
 // Cupido agisce solo la prima notte; la strega dopo i lupi, perché vede la loro vittima.
 const ORDINE_NOTTE = ['cupido', 'lupo', 'strega', 'veggente', 'guardia'];
 
-// Quali ruoli usare in base al numero di giocatori e ai ruoli extra scelti.
-function composizione(n, extra = []) {
-  const lupi = n <= 5 ? 1 : n <= 10 ? 2 : 3;
+// Numero di lupi automatico: 1 fino a 5 giocatori, 2 fino a 10, poi 3.
+function lupiAutomatici(n) {
+  return n <= 5 ? 1 : n <= 10 ? 2 : 3;
+}
+
+// Massimo di lupi con n giocatori: devono restare meno degli altri, sennò vincono subito.
+function lupiMassimi(n) {
+  return Math.max(1, Math.floor((n - 1) / 2));
+}
+
+// Quali ruoli usare in base al numero di giocatori, ai ruoli extra scelti
+// e ai lupi scelti dal tavolo (0 = automatico; sopra il massimo si usa il massimo).
+function composizione(n, extra = [], lupiScelti = 0) {
+  const lupi = lupiScelti > 0 ? Math.min(lupiScelti, lupiMassimi(n)) : lupiAutomatici(n);
   const ruoli = Array(lupi).fill('lupo');
   ruoli.push('veggente');
   if (n >= 6) ruoli.push('guardia');
@@ -91,4 +102,4 @@ function conta(ruoli) {
   return c;
 }
 
-module.exports = { RUOLI, RUOLI_EXTRA, EXTRA_PREDEFINITI, ORDINE_NOTTE, composizione, conta };
+module.exports = { RUOLI, RUOLI_EXTRA, EXTRA_PREDEFINITI, ORDINE_NOTTE, composizione, lupiAutomatici, lupiMassimi, conta };

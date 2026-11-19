@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { RUOLI, RUOLI_EXTRA, EXTRA_PREDEFINITI, ORDINE_NOTTE, composizione, conta } = require('./ruoli');
+const { RUOLI, RUOLI_EXTRA, EXTRA_PREDEFINITI, ORDINE_NOTTE, composizione, lupiAutomatici, lupiMassimi, conta } = require('./ruoli');
 const N = require('./narratore');
 const T = require('./tutorial');
 const Bot = require('./bot');
@@ -83,6 +83,7 @@ class Partita {
     this.impostazioni = {
       discussioneSec: 180,
       extra: [...EXTRA_PREDEFINITI],
+      lupi: 0, // 0 = automatico in base al numero di giocatori
       rivelaRuoli: true,
       narratoreUmano: Boolean(opzioni.narratoreUmano),
     };
@@ -160,6 +161,8 @@ class Partita {
         this.impostazioni.extra = RUOLI_EXTRA.filter((r) => imp.extra.includes(r));
         this.allineaTutorial();
       }
+      const lupi = Number(imp?.lupi);
+      if (imp && 'lupi' in imp && Number.isInteger(lupi)) this.impostazioni.lupi = Math.min(10, Math.max(0, lupi));
       if (typeof imp?.rivelaRuoli === 'boolean') this.impostazioni.rivelaRuoli = imp.rivelaRuoli;
       if (typeof imp?.narratoreUmano === 'boolean') this.impostazioni.narratoreUmano = imp.narratoreUmano;
       this.trasmetti();
@@ -429,10 +432,12 @@ class Partita {
       tutorial: this.tutorialPubblico(),
       vincitore: this.vincitore,
       impostazioni: this.impostazioni,
+      lupiAuto: lupiAutomatici(this.giocatori.size),
+      lupiMax: lupiMassimi(this.giocatori.size),
       minGiocatori: this.minGiocatori,
       conteggioRuoli:
         this.fase === 'lobby'
-          ? conta(composizione(this.giocatori.size, this.impostazioni.extra))
+          ? conta(composizione(this.giocatori.size, this.impostazioni.extra, this.impostazioni.lupi))
           : this.conteggioRuoli,
       giocatori: [...this.giocatori.values()].map((p) => ({
         id: p.id,
@@ -597,7 +602,7 @@ class Partita {
     const lista = [...this.giocatori.values()];
     if (lista.length < this.minGiocatori) return `Servono almeno ${this.minGiocatori} giocatori.`;
     this.tutorial = null; // la partita vera chiude il tutorial
-    const ruoli = mescola(composizione(lista.length, this.impostazioni.extra));
+    const ruoli = mescola(composizione(lista.length, this.impostazioni.extra, this.impostazioni.lupi));
     lista.forEach((p, i) => Object.assign(p, { ruolo: ruoli[i], vivo: true, pronto: false, indagini: [] }));
     this.conteggioRuoli = conta(ruoli);
     const run = this.runId;

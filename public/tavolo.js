@@ -368,6 +368,9 @@
     const extra = [...$('ruoli-extra').querySelectorAll('input:checked')].map((i) => i.value);
     socket.emit('tavolo:impostazioni', { extra });
   });
+  $('numero-lupi').addEventListener('change', (e) => {
+    socket.emit('tavolo:impostazioni', { lupi: Number(e.target.value) });
+  });
   $('rivela-ruoli').addEventListener('change', (e) => {
     socket.emit('tavolo:impostazioni', { rivelaRuoli: e.target.checked });
   });
@@ -434,6 +437,16 @@
           <input type="checkbox" value="${r}" ${on}> ${info.emoji} ${esc(info.nome)}</label>`;
       })
       .join('');
+    const sceltiLupi = s.impostazioni.lupi || 0;
+    const opzioniLupi = [`<option value="0">Automatico (${s.lupiAuto})</option>`];
+    for (let i = 1; i <= Math.max(s.lupiMax, sceltiLupi, 3); i++) opzioniLupi.push(`<option value="${i}">${i}</option>`);
+    const menuLupi = opzioniLupi.join('');
+    if ($('numero-lupi').innerHTML !== menuLupi) $('numero-lupi').innerHTML = menuLupi;
+    $('numero-lupi').value = String(sceltiLupi);
+    $('spiega-lupi').textContent =
+      n && sceltiLupi > s.lupiMax
+        ? `Con ${n} giocatori i lupi possono essere al massimo ${s.lupiMax}: ne useremo ${s.lupiMax}.`
+        : '';
     const rivela = s.impostazioni.rivelaRuoli;
     $('rivela-ruoli').checked = rivela;
     const umano = Boolean(s.impostazioni.narratoreUmano);
